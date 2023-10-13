@@ -8,11 +8,16 @@ class WaveSubscriberNode(Node):
     def __init__(self):
         super().__init__("wave_subscriber")
         self.get_logger().info("Started wave subscriber node")
-        self.wave_subscriber = self.create_subscription(
+        self.wave_force_subscriber = self.create_subscription(
             Vector3, "/wave/force", self.force_callback, 10)
+        self.wave_torque_subscriber = self.create_subscription(
+            Vector3, "/wave/torque", self.torque_callback, 10)
 
     def force_callback(self, msg: Vector3):
-        self.get_logger().info(str(msg))
+        self.get_logger().info("Force: " + str(msg))
+
+    def torque_callback(self, msg: Vector3):
+        self.get_logger().info("Torque: " + str(msg))
 
 
 def main(args=None):

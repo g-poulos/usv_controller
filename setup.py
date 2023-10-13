@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "wave_subscriber = usv_controller.wave_subscriber:main"
+            "wave_subscriber = usv_controller.wave_subscriber:main",
+            "boat_controller = usv_controller.boat_control:main"
         ],
     },
 )
