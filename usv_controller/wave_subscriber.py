@@ -6,6 +6,14 @@ from sensor_msgs.msg import JointState
 from nav_msgs.msg import Odometry
 
 MODEL_NAME = "boat"
+list1 = []
+
+
+def write_to_file():
+    f = open("/src/usv_controller/logfiles/demofile2.txt", "w")
+    for l in list1:
+        f.write(l + "\n")
+    f.close()
 
 
 class WaveSubscriberNode(Node):
@@ -27,10 +35,14 @@ class WaveSubscriberNode(Node):
 
     def odom_callback(self, msg: Odometry):
         self.get_logger().info("Odometry: " + str(msg.twist.twist))
+        list1.append("Odometry: " + str(msg.twist.twist))
 
 
 def main(args=None):
-    rclpy.init(args=args)
-    node = WaveSubscriberNode()
-    rclpy.spin(node)
-    rclpy.shutdown()
+    try:
+        rclpy.init(args=args)
+        node = WaveSubscriberNode()
+        rclpy.spin(node)
+        rclpy.shutdown()
+    except KeyboardInterrupt:
+        write_to_file()
