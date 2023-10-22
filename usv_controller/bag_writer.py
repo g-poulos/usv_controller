@@ -1,17 +1,20 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.serialization import serialize_message
-from geometry_msgs.msg import Vector3, Pose
+from geometry_msgs.msg import Vector3
 from nav_msgs.msg import Odometry
 import rosbag2_py
+import os
+RECORD_NUM = 0
 
 
 class SimpleBagRecorder(Node):
     def __init__(self):
         super().__init__('simple_bag_recorder')
         self.writer = rosbag2_py.SequentialWriter()
+
         storage_options = rosbag2_py._storage.StorageOptions(
-            uri='src/usv_controller/bagfiles/record5',
+            uri=f'src/usv_controller/bagfiles/record{RECORD_NUM}',
             storage_id='mcap')
         converter_options = rosbag2_py._storage.ConverterOptions('cdr', 'cdr')
         self.writer.open(storage_options, converter_options)
@@ -29,8 +32,8 @@ class SimpleBagRecorder(Node):
         self.writer.create_topic(wave_torque_topic_info)
 
         odom_topic_info = rosbag2_py._storage.TopicMetadata(
-            name='/model/boat/pose',
-            type='geometry_msgs/msg/Pose',
+            name='/model/boat/odometry',
+            type='nav_msgs/msg/Odometry',
             serialization_format='cdr')
         self.writer.create_topic(odom_topic_info)
 
@@ -47,8 +50,8 @@ class SimpleBagRecorder(Node):
             10)
 
         self.odom_subscription = self.create_subscription(
-            Pose,
-            "/model/boat/pose",
+            Odometry,
+            "/model/boat/odometry",
             self.pose_callback,
             10)
 
@@ -66,12 +69,24 @@ class SimpleBagRecorder(Node):
 
     def pose_callback(self, msg):
         self.writer.write(
-            "/model/boat/pose",
+            "/model/boat/odometry",
             serialize_message(msg),
             self.get_clock().now().nanoseconds)
 
 
+def count_records(path):
+    print(path)
+    files = folders = 0
+    for _, dirnames, filenames in os.walk(path):
+        files += len(filenames)
+        folders += len(dirnames)
+    return folders
+
+
 def main(args=None):
+    global RECORD_NUM
+    RECORD_NUM = count_records(os.path.dirname(os.path.realpath(__file__)) + "/../bagfiles")
+    print(RECORD_NUM)
     rclpy.init(args=args)
     sbr = SimpleBagRecorder()
     rclpy.spin(sbr)
