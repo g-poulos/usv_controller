@@ -1,8 +1,8 @@
 import math
 import numpy as np
-import random
-import matplotlib.pyplot as plt
-
+from bisect import bisect_left
+from disturbances import IntegratedWhiteNoise
+import os
 
 ############### Dimensions and Mass ###############
 m = 425             # Mass of the structure
@@ -21,9 +21,10 @@ d_ae = d_ad * 2 / 3
 I_zz = 2.82698738e+03
 
 ############### Coefficients and Constants ###############
-density = 1025      # Water density
-Ca = 0.8            # Added mass coefficient
-Cd = 0.8            # Drag coefficient
+water_density = 1025    # Water density
+air_density = 1.222     # Air density
+Ca = 0.8                # Added mass coefficient
+Cd = 0.8                # Drag coefficient
 
 ############### Initial Values ###############
 x_s = 5             # (m)     Start position in X axis
@@ -42,34 +43,69 @@ u = u_s
 v = v_s
 r = r_s
 
+current = []
+wind = []
 
-class IntegratedWhiteNoise:
-    def __init__(self, min_val, max_val, stddev):
-        self.min_val = min_val
-        self.max_val = max_val
-        self.stddev = stddev
-        self.dt = 0.01
-        self.prev_val = 0.5 * (max_val - min_val)
 
-    def get_value(self):
-        next_value = self.prev_val + self.dt * random.gauss(0, self.stddev)
+def read_surface_file(file):
+    current_file = open(file, "r")
+    current_file.readline()
+    angle = []
+    area = []
+    symb_found = False
+    for value in current_file:
+        value = value.strip()
+        if value != "#":
+            value = float(value)
+            if symb_found:
+                area.append(value)
+            else:
+                angle.append(value)
+        else:
+            symb_found = True
 
-        if next_value > self.max_val or next_value < self.min_val:
-            next_value = next_value - self.dt * random.gauss(0, self.stddev)
+    return angle, area
 
-        self.prev_val = next_value
-        return next_value
+
+def get_surface_areas():
+    current = read_surface_file("../vereniki/current_surface.txt")
+    wind = read_surface_file("../vereniki/wind_surface.txt")
+    return current, wind
+
+
+def take_closest(lst, num):
+    pos = bisect_left(lst, num)
+    if pos == 0:
+        return 0
+    if pos == len(lst):
+        return len(lst)
+    before = lst[pos - 1]
+    after = lst[pos]
+    if after - num < num - before:
+        return pos
+    else:
+        return pos-1
+
+
+def get_surface(direction):
+    return wind[1][take_closest(wind[0], direction * (math.pi/180))]
 
 
 def height_above_surface():     # (Eq. 4)
-    return H_uc - (1/(R_uc**2)) * (m/(3 * math.pi * density) - (R_lc**2)*H_lc)
+    return H_uc - (1/(R_uc**2)) * (m / (3 * math.pi * water_density) - (R_lc ** 2) * H_lc)
+
+
+def wind_force(speed, direction):
+    C = 1.2
+    force = 0.5 * C * direction * air_density * (speed**2) * get_surface(direction)
+    return force
 
 
 def force_on_a(h, ):            # (Eq. 5a)
     # TODO: Add velocities and accelerations
-    added_mass_force = Ca * math.pi * density * ((R_uc**2) * (H_uc - h) + (R_lc**2)*H_lc)
-    inertia_force = math.pi * density * ((R_uc**2) * (H_uc - h) + (R_lc**2)*H_lc)
-    drag_force = Cd * density * (R_uc * (H_uc - h) + R_lc*H_lc)
+    added_mass_force = Ca * math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
+    inertia_force = math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
+    drag_force = Cd * water_density * (R_uc * (H_uc - h) + R_lc * H_lc)
 
     return added_mass_force + inertia_force + drag_force
 
@@ -117,20 +153,9 @@ def position():
 if __name__ == '__main__':
     current_velocity = IntegratedWhiteNoise(0, 0.514, 0.001)
     current_direction = IntegratedWhiteNoise(0, 360, 1)
-    wind_velocity = IntegratedWhiteNoise(0, 7.716, 0.04)
-    wind_direction = IntegratedWhiteNoise(0, 360, 1)
+    wind_velocity = IntegratedWhiteNoise(0, 7.716, 2)
+    wind_direction = IntegratedWhiteNoise(0, 360, 7)
 
-    # r = 1000000
-    # cv = []
-    # cd = []
-    # wv = []
-    # wd = []
-    # for i in range(r):
-    #     cv.append(current_velocity.get_value())
-    #     wv.append(wind_velocity.get_value())
-    #
-    # plt.plot(range(r), cv)
-    # plt.plot(range(r), wv)
-    # plt.show()
+    current, wind = get_surface_areas()
+    print(len(wind[0]), len(wind[1]))
 
-    position()
