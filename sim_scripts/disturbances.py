@@ -3,12 +3,12 @@ import matplotlib.pyplot as plt
 
 
 class IntegratedWhiteNoise:
-    def __init__(self, min_val, max_val, stddev):
+    def __init__(self, min_val, max_val, init_val, stddev):
         self.min_val = min_val
         self.max_val = max_val
         self.stddev = stddev
         self.dt = 0.01
-        self.prev_val = 0.5 * (max_val - min_val)
+        self.prev_val = init_val
 
     def get_value(self):
         next_value = self.prev_val + self.dt * random.gauss(0, self.stddev)
@@ -21,10 +21,10 @@ class IntegratedWhiteNoise:
 
 
 if __name__ == '__main__':
-    current_velocity = IntegratedWhiteNoise(0, 0.514, 0.001)
-    current_direction = IntegratedWhiteNoise(0, 360, 1)
-    wind_velocity = IntegratedWhiteNoise(0, 7.716, 2)
-    wind_direction = IntegratedWhiteNoise(0, 360, 7)
+    current_velocity = IntegratedWhiteNoise(0, 0.514, 0.1, 0.001)
+    current_direction = IntegratedWhiteNoise(0, 360, 100, 1)
+    wind_velocity = IntegratedWhiteNoise(0, 7.716, 2, 2)
+    wind_direction = IntegratedWhiteNoise(0, 360, 200, 25)
 
     #      one minute           * x
     time = int(0.01 * 100 * 60) * 60

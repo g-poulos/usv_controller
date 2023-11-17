@@ -1,4 +1,6 @@
 import math
+
+import matplotlib.pyplot as plt
 import numpy as np
 from bisect import bisect_left
 from disturbances import IntegratedWhiteNoise
@@ -17,8 +19,13 @@ L_ac = 4.5          # Length of the triangular side
 d_ad = math.sqrt(L_ac ** 2 - (L_bc / 2) ** 2)
 d_bf = L_bc / 2
 d_ae = d_ad * 2 / 3
+L = np.sqrt((L_ac**2) - ((L_bc/2)**2))  # Overall length
 
-I_zz = 2.82698738e+03
+I_zz = 1488.504
+
+A_t = 5.587971908895481    # Transverse projected area
+A_l = 6.08997115068253     # Lateral projected area
+
 
 ############### Coefficients and Constants ###############
 water_density = 1025    # Water density
@@ -43,119 +50,79 @@ u = u_s
 v = v_s
 r = r_s
 
-current = []
-wind = []
-
-
-def read_surface_file(file):
-    current_file = open(file, "r")
-    current_file.readline()
-    angle = []
-    area = []
-    symb_found = False
-    for value in current_file:
-        value = value.strip()
-        if value != "#":
-            value = float(value)
-            if symb_found:
-                area.append(value)
-            else:
-                angle.append(value)
-        else:
-            symb_found = True
-
-    return angle, area
-
-
-def get_surface_areas():
-    current = read_surface_file("../vereniki/current_surface.txt")
-    wind = read_surface_file("../vereniki/wind_surface.txt")
-    return current, wind
-
-
-def take_closest(lst, num):
-    pos = bisect_left(lst, num)
-    if pos == 0:
-        return 0
-    if pos == len(lst):
-        return len(lst)
-    before = lst[pos - 1]
-    after = lst[pos]
-    if after - num < num - before:
-        return pos
-    else:
-        return pos-1
-
-
-def get_surface(direction):
-    return wind[1][take_closest(wind[0], direction * (math.pi/180))]
-
 
 def height_above_surface():     # (Eq. 4)
     return H_uc - (1/(R_uc**2)) * (m / (3 * math.pi * water_density) - (R_lc ** 2) * H_lc)
 
 
-def wind_force(speed, direction):
+def wind_force(speed, direction):   # (Eq. 15)
     C = 1.2
-    force = 0.5 * C * direction * air_density * (speed**2) * get_surface(direction)
-    return force
+    relative_angle = direction - psi
+    relative_speed_x = speed[0] - u
+    relative_speed_y = speed[1] - v
+    force_x = 0.5 * C * relative_angle * air_density * (relative_speed_x**2) * A_t
+    force_y = 0.5 * C * relative_angle * air_density * (relative_speed_y**2) * A_l
+    moment_z = 0.5 * C * relative_angle * air_density * (relative_speed_y**2) * A_l * L
+    return np.array([force_x, force_y, moment_z])
 
 
-def force_on_a(h, ):            # (Eq. 5a)
-    # TODO: Add velocities and accelerations
-    added_mass_force = Ca * math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
-    inertia_force = math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
-    drag_force = Cd * water_density * (R_uc * (H_uc - h) + R_lc * H_lc)
-
-    return added_mass_force + inertia_force + drag_force
+def vector_to_xy_components(speed, direction):
+    x_comp = speed * np.cos(direction)
+    y_comp = speed * np.sin(direction)
+    return np.array([x_comp, y_comp])
 
 
-def velocity_a():        # (Eq. 3a)
-    x_vel = u + r * ((L_bc/2) - d_bf)
-    y_vel = v + r * d_ae
-    return x_vel, y_vel
+
+# (Eq. 8f)
+def get_mass_matrix():
+    mass_matrix = np.zeros((3, 3))
+    m_a = - Ca * math.pi * 1025 * (R_uc ** 2 * (H_uc + R_lc ** 2 * H_lc))
+
+    mass_matrix[0][0] = mass_matrix[1][1] = m - m_a
+    mass_matrix[0][1] = mass_matrix[1][0] = 0
+    mass_matrix[0][2] = mass_matrix[2][0] = 3 * (d_bf - (L_bc / 2)) * m_a
+    mass_matrix[1][2] = mass_matrix[2][1] = (2 * d_ad - 3 * d_ae) * m_a
+    mass_matrix[2][2] = I_zz + m_a * (- 2*d_ad + 4*d_ad*d_ae - 3*(d_ae**2) - (5/4)*(L_bc**2) + 3*L_bc*d_bf - 3*(d_bf**2))
+    return mass_matrix
 
 
-def position_a():
-    # Initial
-    h = 0.01
-    x_pos = d_ae
-    y_pos = d_bf - (L_bc/2)
-
-    # First step
-    x_v, y_v = velocity_a()
-    x_pos_temp = x_pos
-    y_pos_temp = y_pos
-
-    # Continue
-    x = [x_pos]
-    y = [y_pos]
-    for i in range(1000):
-        x_pos_temp = x_pos_temp + h * x_v
-        y_pos_temp = y_pos_temp + h * y_v
-        x.append(x_pos_temp)
-        y.append(y_pos_temp)
-
-    return x, y
-
-
-def position():
-    x_dot = np.transpose(np.array([x, y, psi]))
-    rotation = np.array([[np.cos(psi), -np.sin(psi), 0],
-                        [np.sin(psi), np.cos(psi), 0],
-                        [0, 0, 1]])
-    velocity = np.transpose(np.array([u, v, r]))
-    print(x_dot)
-    print(rotation)
-    print(velocity)
+# (Eq. 7b)
+def get_engine_vectored_thrust():
+    return np.array([100, 100, 10])
 
 
 if __name__ == '__main__':
-    current_velocity = IntegratedWhiteNoise(0, 0.514, 0.001)
-    current_direction = IntegratedWhiteNoise(0, 360, 1)
-    wind_velocity = IntegratedWhiteNoise(0, 7.716, 2)
-    wind_direction = IntegratedWhiteNoise(0, 360, 7)
+    current_velocity = IntegratedWhiteNoise(0, 0.514, 0.1, 0.001)
+    current_direction = IntegratedWhiteNoise(0, 360, 100, 1)
+    wind_velocity = IntegratedWhiteNoise(0, 7.716, 2, 2)
+    wind_direction = IntegratedWhiteNoise(0, 360, 200, 7)
 
-    current, wind = get_surface_areas()
-    print(len(wind[0]), len(wind[1]))
+    # for i in range(100):
+    #     v = wind_velocity.get_value()
+    #     d = wind_direction.get_value()
+    #     vec = vector_to_xy_components(v, d)
+    #     f = wind_force(vec, d)
+    #     print(f)
+
+    mass_inv = np.linalg.inv(get_mass_matrix())
+    init_vel = np.array([0, 0, 0])
+    h = 0.01
+
+    vel_lst = np.array([0, 0, 0])
+    for i in range(256):
+        v = wind_velocity.get_value()
+        d = wind_direction.get_value()
+        vec = vector_to_xy_components(v, d)
+        f = wind_force(vec, d)
+
+        vel = init_vel + h * mass_inv.dot(get_engine_vectored_thrust() + f)
+        init_vel = vel
+        vel_lst = np.vstack([vel_lst, vel])
+
+    fig, (ax1, ax2, ax3) = plt.subplots(3)
+    ax1.plot(range(257), vel_lst[:, 0])
+    ax2.plot(range(257), vel_lst[:, 1])
+    ax3.plot(range(257), vel_lst[:, 2])
+    plt.show()
+
 
