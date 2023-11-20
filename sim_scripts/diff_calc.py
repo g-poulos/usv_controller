@@ -62,34 +62,35 @@ if __name__ == '__main__':
     current_direction = IntegratedWhiteNoise(0, 360, 100, 1)
     wind_velocity = IntegratedWhiteNoise(0, 7.716, 2, 2)
     wind_direction = IntegratedWhiteNoise(0, 360, 200, 7)
+    mass_inv = np.linalg.inv(get_mass_matrix())
 
-    # for i in range(100):
-    #     v = wind_velocity.get_value()
-    #     d = wind_direction.get_value()
-    #     vec = vector_to_xy_components(v, d)
-    #     f = wind_force(vec, d)
-    #     print(f)
+    h = 0.01
+    it = 1000
 
-    # mass_inv = np.linalg.inv(get_mass_matrix())
-    # init_vel = np.array([0, 0, 0])
-    # h = 0.01
-    #
-    # vel_lst = np.array([0, 0, 0])
-    # it = 10000
-    # for i in range(it):
-    #     v = wind_velocity.get_value()
-    #     d = wind_direction.get_value()
-    #     vec = vector_to_xy_components(v, d)
-    #     f = wind_force(vec, d)
-    #
-    #     vel = init_vel + h * mass_inv.dot(get_engine_vectored_thrust())
-    #     init_vel = np.linalg.inv(get_rotation_matrix(psi)).dot(vel)
-    #     vel_lst = np.vstack([vel_lst, vel])
-    #
-    # fig, (ax1, ax2, ax3) = plt.subplots(3)
-    # ax1.plot(range(it+1), vel_lst[:, 0])
-    # ax2.plot(range(it+1), vel_lst[:, 1])
-    # ax3.plot(range(it+1), vel_lst[:, 2])
-    # plt.show()
+    vel = np.zeros((3, it))
+    pos = np.zeros((3, it))
+
+    for i in range(it - 1):
+        v = wind_velocity.get_value()
+        d = wind_direction.get_value()
+        vec = vector_to_xy_components(v, d)
+        f = wind_force(vec, d, vel[:, i])
+        force = np.array([100, 0, 0])
+        vel[:, i + 1] = vel[:, i] + h * mass_inv.dot(force + f)
+
+        pos[:, i + 1] = pos[:, i] + h * mass_inv.dot(force + f) * (i * h)
+
+    fig, ax = plt.subplots(2, 3, sharex=True, sharey=True)
+    ax[0, 0].plot(range(it), pos[0, :])
+    ax[0, 1].plot(range(it), pos[1, :])
+    ax[0, 2].plot(range(it), pos[2, :])
+    ax[1, 0].plot(range(it), vel[0, :])
+    ax[1, 1].plot(range(it), vel[1, :])
+    ax[1, 2].plot(range(it), vel[2, :])
+    ax[0, 0].set_title('X-Axis')
+    ax[0, 1].set_title('Y-Axis')
+    ax[0, 2].set_title('Z-Moment')
+
+    plt.show()
 
 
