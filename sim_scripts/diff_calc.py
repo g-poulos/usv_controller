@@ -11,17 +11,12 @@ def height_above_surface():     # (Eq. 4)
 
 
 def wind_force(speed, direction, velocity):   # (Eq. 15)
-
-    # TODO: Check relative velocities
     C = 1
     relative_angle = direction - psi
-    # relative_speed_x = speed[0] - velocity[0]
-    # relative_speed_y = speed[1] - velocity[1]
-    relative_speed_x = velocity[0] - speed[0]
-    relative_speed_y = velocity[1] - speed[1]
-    force_x = 0.5 * C * air_density * (relative_speed_x**2) * A_t
-    force_y = 0.5 * C * air_density * (relative_speed_y**2) * A_l
-    moment_z = 0.5 * C * air_density * (relative_speed_y**2) * A_l * L
+    magnitude = np.linalg.norm(velocity[:2])
+    force_x = 0.5 * C * air_density * (magnitude**2) * A_t
+    force_y = 0.5 * C * air_density * (magnitude**2) * A_l
+    moment_z = 0.5 * C * air_density * (magnitude**2) * A_l * L
     return np.array([force_x, force_y, moment_z])
 
 

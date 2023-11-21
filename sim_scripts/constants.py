@@ -18,8 +18,8 @@ L = np.sqrt((L_ac**2) - ((L_bc/2)**2))  # Overall length
 
 I_zz = 1488.504
 
-A_t = 5.587971908895481    # Transverse projected area
-A_l = 6.08997115068253     # Lateral projected area
+A_t = 3.9311583257344327    # Transverse projected area
+A_l = 4.433157604350512     # Lateral projected area
 
 
 ############### Coefficients and Constants ###############
