@@ -26,11 +26,14 @@ def project_points_to_plane(mesh, origin=None, normal=(1, 0, 0), inplace=False):
     return
 
 
-def get_projection_area(mesh, normal, iterations=10, plot=False):
+def get_projection_area(mesh, normal, iterations=10, alpha=0.5, plot=False):
     min_z = mesh.bounds[4]
     max_z = mesh.bounds[5]
     step = (max_z - min_z)/iterations
     total_area = 0
+
+    pl = pv.Plotter()
+    pl.add_mesh(mesh, style='wireframe')
 
     for i in range(iterations):
         # Take mesh slice
@@ -43,37 +46,27 @@ def get_projection_area(mesh, normal, iterations=10, plot=False):
 
         # Generate new surface from projected points and add its area
         polydata = pv.PolyData(projected_points)
-        surface = polydata.delaunay_2d(alpha=0.3)
+        surface = polydata.delaunay_2d(alpha=alpha)
         total_area = total_area + surface.area
 
         if plot:
-            # plot it
-            pl = pv.Plotter()
-            pl.add_mesh(mesh, style='wireframe')
-            pl.add_mesh(surface, show_edges=True, color='white', opacity=0.5, label='New surface')
-            pl.add_mesh(
-                pv.PolyData(clipped.points),
-                color='red',
-                render_points_as_spheres=True,
-                point_size=5,
-                label='Points to project',
-            )
-            pl.add_legend()
-            pl.show()
+            pl.add_mesh(surface, color='red', opacity=0.5)
+    if plot:
+        pl.show()
     return total_area
 
 
 if __name__ == '__main__':
-    vereniki = pv.read("../../../../gz_ws/src/usv_simulation/models/vereniki/meshes/vereniki_scaled3.stl")
-    vereniki_lower_part = vereniki.clip('z', value=-((0.65 + 0.3) / 2) + 0.3, invert=True)
-    vereniki_upper_part = vereniki.clip('z', value=-((0.65 + 0.3) / 2) + 0.45, invert=False)
-    #
-
-    # vereniki = pv.read("../../../../gz_ws/src/usv_simulation/models/boat/meshes/boat3.stl")
+    # vereniki = pv.read("../../../../gz_ws/src/usv_simulation/models/vereniki/meshes/vereniki_scaled3.stl")
     # vereniki_lower_part = vereniki.clip('z', value=-((0.65 + 0.3) / 2) + 0.3, invert=True)
     # vereniki_upper_part = vereniki.clip('z', value=-((0.65 + 0.3) / 2) + 0.45, invert=False)
+    # #
 
-    area = get_projection_area(vereniki_lower_part, [1, 0, 0])
+    vereniki = pv.read("../../../../gz_ws/src/usv_simulation/models/boat/meshes/boat3.stl")
+    vereniki_lower_part = vereniki.clip('z', value=-((0.65 + 0.3) / 2) + 0.3, invert=True)
+    vereniki_upper_part = vereniki.clip('z', value=-((0.65 + 0.3) / 2) + 0.45, invert=False)
+
+    area = get_projection_area(vereniki_upper_part, [1, 0, 0], plot=True)
     print(area)
 
 
