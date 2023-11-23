@@ -18,9 +18,13 @@ L = np.sqrt((L_ac**2) - ((L_bc/2)**2))  # Overall length
 
 I_zz = 1488.504
 
-A_t = 3.9311583257344327    # Transverse projected area
-A_l = 4.433157604350512     # Lateral projected area
+# Surface part
+At_upper = 1.470668406331706    # Transverse projected area
+Al_upper = 1.5663578081005782   # Lateral projected area
 
+# Submerged part
+At_lower = 0.6294737439566249   # Transverse projected area
+Al_lower = 0.4196491616786311   # Lateral projected area
 
 ############### Coefficients and Constants ###############
 water_density = 1025    # Water density

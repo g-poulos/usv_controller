@@ -37,7 +37,7 @@ def get_projection_area(mesh, normal, iterations=10, alpha=0.5, plot=False):
 
     for i in range(iterations):
         # Take mesh slice
-        clipped = vereniki.clip('z', value=(i+1)*step, origin=(0, 0, min_z))
+        clipped = mesh.clip('z', value=(i+1)*step, origin=(0, 0, min_z))
         clipped = clipped.clip('z', value=i*step, origin=(0, 0, min_z), invert=False)
 
         # Project slice to plane and remove duplicate points
@@ -57,12 +57,7 @@ def get_projection_area(mesh, normal, iterations=10, alpha=0.5, plot=False):
 
 
 if __name__ == '__main__':
-    # vereniki = pv.read("../../../../gz_ws/src/usv_simulation/models/vereniki/meshes/vereniki_scaled3.stl")
-    # vereniki_lower_part = vereniki.clip('z', value=-((0.65 + 0.3) / 2) + 0.3, invert=True)
-    # vereniki_upper_part = vereniki.clip('z', value=-((0.65 + 0.3) / 2) + 0.45, invert=False)
-    # #
-
-    vereniki = pv.read("../../../../gz_ws/src/usv_simulation/models/boat/meshes/boat3.stl")
+    vereniki = pv.read("../../../../gz_ws/src/usv_simulation/models/vereniki/meshes/vereniki_scaled3.stl")
     vereniki_lower_part = vereniki.clip('z', value=-((0.65 + 0.3) / 2) + 0.3, invert=True)
     vereniki_upper_part = vereniki.clip('z', value=-((0.65 + 0.3) / 2) + 0.45, invert=False)
 
