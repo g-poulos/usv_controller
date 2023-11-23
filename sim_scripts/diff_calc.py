@@ -13,10 +13,11 @@ def height_above_surface():     # (Eq. 4)
 def wind_force(speed, direction, velocity):   # (Eq. 15)
     C = 1
     relative_angle = direction - psi
-    magnitude = np.linalg.norm(velocity[:2])
-    force_x = 0.5 * C * air_density * (magnitude**2) * A_t
-    force_y = 0.5 * C * air_density * (magnitude**2) * A_l
-    moment_z = 0.5 * C * air_density * (magnitude**2) * A_l * L
+    relative_velocity = vector_to_xy_components(speed, direction) - velocity[:2]
+    magnitude = np.linalg.norm(relative_velocity)
+    force_x = 0.5 * C * air_density * (magnitude**2) * At_upper
+    force_y = 0.5 * C * air_density * (magnitude**2) * Al_upper
+    moment_z = 0.5 * C * air_density * (magnitude**2) * Al_upper * L
     return np.array([force_x, force_y, moment_z])
 
 
@@ -59,6 +60,8 @@ if __name__ == '__main__':
     wind_direction = IntegratedWhiteNoise(0, 360, 200, 7)
     mass_inv = np.linalg.inv(get_mass_matrix())
 
+    engine_thrust = np.array([10, 10, 0])
+
     h = 0.01
     it = 1000
 
@@ -69,23 +72,32 @@ if __name__ == '__main__':
         v = wind_velocity.get_value()
         d = wind_direction.get_value()
         vec = vector_to_xy_components(v, d)
-        f = wind_force(vec, d, vel[:, i])
-        force = np.array([100, 0, 0])
-        vel[:, i + 1] = vel[:, i] + h * mass_inv.dot(force + f)
+        wind = wind_force(vec, d, vel[:, i])
 
-        pos[:, i + 1] = pos[:, i] + h * mass_inv.dot(force + f) * (i * h)
+        acting_forces = engine_thrust + wind
+
+        vel[:, i + 1] = vel[:, i] + h * mass_inv.dot(acting_forces)             # Velocity
+        pos[:, i + 1] = pos[:, i] + h * mass_inv.dot(acting_forces) * (i * h)   # Position
 
     fig, ax = plt.subplots(2, 3, sharex=True, sharey=True)
     ax[0, 0].plot(range(it), pos[0, :])
     ax[0, 1].plot(range(it), pos[1, :])
     ax[0, 2].plot(range(it), pos[2, :])
+
     ax[1, 0].plot(range(it), vel[0, :])
     ax[1, 1].plot(range(it), vel[1, :])
     ax[1, 2].plot(range(it), vel[2, :])
-    ax[0, 0].set_title('X-Axis')
-    ax[0, 1].set_title('Y-Axis')
-    ax[0, 2].set_title('Z-Moment')
+    ax[0, 0].set_title('Position X-Axis')
+    ax[0, 1].set_title('Position Y-Axis')
+    ax[0, 2].set_title('Orientation Z-Axis')
+    ax[1, 0].set_title('Linear Velocity X-Axis')
+    ax[1, 1].set_title('Linear Velocity Y-Axis')
+    ax[1, 2].set_title('Angular Velocity Z-Axis')
 
+    for i in range(2):
+        for j in range(3):
+            ax[i, j].grid(True)
+    fig.set_figwidth(15)
     plt.show()
 
 
