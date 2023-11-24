@@ -10,14 +10,27 @@ def height_above_surface():     # (Eq. 4)
     return H_uc - (1/(R_uc**2)) * (m / (3 * math.pi * water_density) - (R_lc ** 2) * H_lc)
 
 
-def wind_force(speed, direction, velocity):   # (Eq. 15)
+def dist_to_force(speed, direction, velocity, mode):   # (Eq. 15)
     C = 1
     relative_angle = direction - psi
+
+    if mode == "wind":
+        density = air_density
+        At = At_upper
+        Al = Al_upper
+    elif mode == "current":
+        density = water_density
+        At = At_lower
+        Al = Al_lower
+    else:
+        print("Invalid force mode")
+        return
+
     relative_velocity = vector_to_xy_components(speed, direction) - velocity[:2]
     magnitude = np.linalg.norm(relative_velocity)
-    force_x = 0.5 * C * air_density * (magnitude**2) * At_upper
-    force_y = 0.5 * C * air_density * (magnitude**2) * Al_upper
-    moment_z = 0.5 * C * air_density * (magnitude**2) * Al_upper * L
+    force_x = 0.5 * C * density * (magnitude**2) * At
+    force_y = 0.5 * C * density * (magnitude**2) * Al
+    moment_z = 0.5 * C * density * (magnitude**2) * Al * L
     return np.array([force_x, force_y, moment_z])
 
 
@@ -60,7 +73,7 @@ if __name__ == '__main__':
     wind_direction = IntegratedWhiteNoise(0, 360, 200, 7)
     mass_inv = np.linalg.inv(get_mass_matrix())
 
-    engine_thrust = np.array([10, 10, 0])
+    engine_thrust = np.array([100, 100, 0])
 
     h = 0.01
     it = 1000
@@ -69,10 +82,13 @@ if __name__ == '__main__':
     pos = np.zeros((3, it))
 
     for i in range(it - 1):
-        v = wind_velocity.get_value()
-        d = wind_direction.get_value()
-        vec = vector_to_xy_components(v, d)
-        wind = wind_force(vec, d, vel[:, i])
+        wind_speed = wind_velocity.get_value()
+        wind_dir = wind_direction.get_value()
+        wind = dist_to_force(wind_speed, wind_dir, vel[:, i], mode="wind")
+
+        current_speed = current_velocity.get_value()
+        current_dir = current_direction.get_value()
+        current = dist_to_force(current_speed, current_dir, vel[:, i], mode="current")
 
         acting_forces = engine_thrust + wind
 
