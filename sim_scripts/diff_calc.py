@@ -47,11 +47,17 @@ def get_rotation_matrix(angle):
                      [0, 0, 1]])
 
 
-def force_on_point(acc):
-    # TODO: Add velocities and accelerations
+def force_on_point(acc, vel):
+    magnitude = np.linalg.norm(vel)
+
     added_mass_force = Ca * math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
+    added_mass_force = added_mass_force * (-acc)
+
     inertia_force = math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
+    inertia_force = inertia_force * (-acc)
+
     drag_force = Cd * water_density * (R_uc * (H_uc - h) + R_lc * H_lc)
+    drag_force = drag_force * magnitude * (-vel)
 
     return added_mass_force + inertia_force + drag_force
 
@@ -121,7 +127,7 @@ if __name__ == '__main__':
     wind_direction = IntegratedWhiteNoise(0, 360, 270, 6)
     mass_inv = np.linalg.inv(get_mass_matrix())
 
-    engine_thrust = np.array([10, 10, 0])
+    engine_thrust = np.array([-100, 0, 0])
 
     h = 0.01
     it = int((0.01 * 100) * 3600)
@@ -141,13 +147,14 @@ if __name__ == '__main__':
         current_dir = current_direction.get_value()
         current[:, i] = dist_to_force(current_speed, current_dir, vel[:, i], mode="current")
 
-        acting_forces = engine_thrust + wind[:, i]
+        # q_dist = wind[:, i] + current[:, i]
+        acting_forces = engine_thrust + force_on_point(acc[:, i], vel[:, i])
         acc[:, i + 1] = mass_inv.dot(acting_forces)                             # Acceleration
         vel[:, i + 1] = vel[:, i] + h * mass_inv.dot(acting_forces)             # Velocity
         pos[:, i + 1] = pos[:, i] + h * mass_inv.dot(acting_forces) * (i * h)   # Position
 
     plot_pos_vel_acc(pos, vel, acc)
-    plot_dist(current, wind)
+    # plot_dist(current, wind)
 
     # fig, ax = plt.subplots(2, 1, sharex=True)
     # ax[0].plot(cv, label='Current Speed')
