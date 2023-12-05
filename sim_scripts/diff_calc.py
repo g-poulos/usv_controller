@@ -4,6 +4,7 @@ import numpy as np
 from disturbances import IntegratedWhiteNoise
 import os
 from constants import *
+from kinematics import *
 
 
 def height_above_surface():     # (Eq. 4)
@@ -47,19 +48,42 @@ def get_rotation_matrix(angle):
                      [0, 0, 1]])
 
 
-def force_on_point(acc, vel):
+# Eq. 5a
+def force_on_point(vel, acc):
     magnitude = np.linalg.norm(vel)
+    h = height_above_surface()
+    water_acc = np.array([0, 0])        # TODO: Add water vel
 
     added_mass_force = Ca * math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
     added_mass_force = added_mass_force * (-acc)
 
     inertia_force = math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
-    inertia_force = inertia_force * (-acc)
+    inertia_force = inertia_force * (-water_acc)
 
     drag_force = Cd * water_density * (R_uc * (H_uc - h) + R_lc * H_lc)
     drag_force = drag_force * magnitude * (-vel)
-
+    # print(f"Added mass: {added_mass_force}")
+    # print(f"Inertia {inertia_force}")
+    # print(f"Drag {drag_force}")
     return added_mass_force + inertia_force + drag_force
+
+
+def hydrodynamics(vel, acc):
+    point_a_force = force_on_point(point_a_vel(vel), point_a_acc(vel, acc))
+    point_a_torque = np.cross(s_a, point_a_force)
+    q_a = [point_a_force, point_a_torque]
+
+    point_b_force = force_on_point(point_b_vel(vel), point_b_acc(vel, acc))
+    point_b_torque = np.cross(s_b, point_b_force)
+    q_b = [point_b_force, point_b_torque]
+
+    point_c_force = force_on_point(point_c_vel(vel), point_c_acc(vel, acc))
+    point_c_torque = np.cross(s_c, point_c_force)
+    q_c = [point_c_force, point_c_torque]
+
+    force = q_a[0] + q_b[0] + q_c[0]
+    torque = q_a[1] + q_b[1] + q_c[1]
+    return np.append(force, torque)
 
 
 # (Eq. 8f)
@@ -127,9 +151,9 @@ if __name__ == '__main__':
     wind_direction = IntegratedWhiteNoise(0, 360, 270, 6)
     mass_inv = np.linalg.inv(get_mass_matrix())
 
-    engine_thrust = np.array([-100, 0, 0])
+    engine_thrust = np.array([100, 0, 0])
 
-    h = 0.01
+    step = 0.01
     it = int((0.01 * 100) * 3600)
 
     acc = np.zeros((3, it))
@@ -148,10 +172,13 @@ if __name__ == '__main__':
         current[:, i] = dist_to_force(current_speed, current_dir, vel[:, i], mode="current")
 
         # q_dist = wind[:, i] + current[:, i]
-        acting_forces = engine_thrust + force_on_point(acc[:, i], vel[:, i])
-        acc[:, i + 1] = mass_inv.dot(acting_forces)                             # Acceleration
-        vel[:, i + 1] = vel[:, i] + h * mass_inv.dot(acting_forces)             # Velocity
-        pos[:, i + 1] = pos[:, i] + h * mass_inv.dot(acting_forces) * (i * h)   # Position
+        acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i])
+        acc[:, i + 1] = mass_inv.dot(acting_forces)                                     # Acceleration
+        vel[:, i + 1] = vel[:, i] + step * mass_inv.dot(acting_forces)                  # Velocity
+        pos[:, i + 1] = pos[:, i] + step * mass_inv.dot(acting_forces) * (i * step)     # Position
+        hydrodynamics(vel[:, i], acc[:, i])
+
+
 
     plot_pos_vel_acc(pos, vel, acc)
     # plot_dist(current, wind)
