@@ -1,19 +1,14 @@
 import math
 import matplotlib.pyplot as plt
 import numpy as np
-from disturbances import IntegratedWhiteNoise
+from disturbances import IntegratedWhiteNoise, WrenchInfo, read_csv, calculate_wrench
 import os
 from constants import *
 from kinematics import *
 
 
-def height_above_surface():     # (Eq. 4)
-    return H_uc - (1/(R_uc**2)) * (m / (3 * math.pi * water_density) - (R_lc ** 2) * H_lc)
-
-
 def dist_to_force(speed, direction, model_velocity, mode):   # (Eq. 15)
     C = 1
-    relative_angle = direction - psi
 
     if mode == "wind":
         density = air_density
@@ -27,25 +22,27 @@ def dist_to_force(speed, direction, model_velocity, mode):   # (Eq. 15)
         print("Invalid force mode")
         return
 
-    relative_velocity = model_velocity[:2] - vector_to_xy_components(speed, direction)
+    relative_velocity = vector_to_xy_components(speed, direction) - model_velocity[:2]
+    x_mag = np.linalg.norm(relative_velocity[0])
+    y_mag = np.linalg.norm(relative_velocity[1])
+
     magnitude = np.linalg.norm(relative_velocity)
-    force_x = 0.5 * C * density * (magnitude**2) * At
-    force_y = 0.5 * C * density * (magnitude**2) * Al
+    force_x = 0.5 * C * density * relative_velocity[0] * x_mag * At
+    force_y = 0.5 * C * density * relative_velocity[1] * y_mag * Al
     moment_z = 0.5 * C * density * (magnitude**2) * Al * L
-    return np.array([force_x, force_y, moment_z])
+
+    # print(f"Model Vel: {model_velocity}")
+    # print(f"Dist Vel: {vector_to_xy_components(speed, direction)}")
+    # print(f"Relative Vel: {relative_velocity}")
+    # print(f"Magnitude: {magnitude}")
+
+    return np.array([force_x, force_y, 0])
 
 
 def vector_to_xy_components(speed, direction):
     x_comp = speed * np.cos(direction)
     y_comp = speed * np.sin(direction)
     return np.array([x_comp, y_comp])
-
-
-# (Eq. 1d)
-def get_rotation_matrix(angle):
-    return np.array([[np.cos(angle), -np.sin(angle), 0],
-                     [np.sin(angle), np.cos(angle), 0],
-                     [0, 0, 1]])
 
 
 # Eq. 5a
@@ -70,19 +67,21 @@ def force_on_point(vel, acc):
 
 def hydrodynamics(vel, acc):
     point_a_force = force_on_point(point_a_vel(vel), point_a_acc(vel, acc))
-    point_a_torque = np.cross(s_a, point_a_force)
+    point_a_torque = np.cross(s_a(), point_a_force)
     q_a = [point_a_force, point_a_torque]
 
     point_b_force = force_on_point(point_b_vel(vel), point_b_acc(vel, acc))
-    point_b_torque = np.cross(s_b, point_b_force)
+    point_b_torque = np.cross(s_b(), point_b_force)
     q_b = [point_b_force, point_b_torque]
 
     point_c_force = force_on_point(point_c_vel(vel), point_c_acc(vel, acc))
-    point_c_torque = np.cross(s_c, point_c_force)
+    point_c_torque = np.cross(s_c(), point_c_force)
     q_c = [point_c_force, point_c_torque]
 
     force = q_a[0] + q_b[0] + q_c[0]
     torque = q_a[1] + q_b[1] + q_c[1]
+    # print(acc)
+    # print(q_a[1], q_b[1], q_c[1])
     return np.append(force, torque)
 
 
@@ -151,7 +150,9 @@ if __name__ == '__main__':
     wind_direction = IntegratedWhiteNoise(0, 360, 270, 6)
     mass_inv = np.linalg.inv(get_mass_matrix())
 
-    engine_thrust = np.array([100, 0, 0])
+    wrench_info = read_csv("current_table.csv")
+
+    engine_thrust = np.array([0, 100, 0])
 
     step = 0.01
     it = int((0.01 * 100) * 3600)
@@ -163,33 +164,23 @@ if __name__ == '__main__':
     wind = np.zeros((3, it))
 
     for i in range(it - 1):
-        wind_speed = wind_velocity.get_value()
-        wind_dir = wind_direction.get_value()
-        wind[:, i] = dist_to_force(wind_speed, wind_dir, vel[:, i], mode="wind")
+        # wind_speed = wind_velocity.get_value()
+        # wind_dir = wind_direction.get_value()
+        # wind[:, i] = dist_to_force(wind_speed, wind_dir, vel[:, i], mode="wind")
 
-        current_speed = current_velocity.get_value()
-        current_dir = current_direction.get_value()
-        current[:, i] = dist_to_force(current_speed, current_dir, vel[:, i], mode="current")
+        # current_speed = current_velocity.get_value()
+        # current_dir = current_direction.get_value()
+        # current[:, i] = dist_to_force(current_speed, current_dir, vel[:, i], mode="current")
+        #
+        # calculate_wrench(pos[:, i], vel[:2, i], current_speed, current_dir, wrench_info)
+        #
+        # q_dist = current[:, i]
+        # print(hydrodynamics(vel[:, i], acc[:, i]))
 
-        # q_dist = wind[:, i] + current[:, i]
         acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i])
         acc[:, i + 1] = mass_inv.dot(acting_forces)                                     # Acceleration
         vel[:, i + 1] = vel[:, i] + step * mass_inv.dot(acting_forces)                  # Velocity
-        pos[:, i + 1] = pos[:, i] + step * mass_inv.dot(acting_forces) * (i * step)     # Position
-        hydrodynamics(vel[:, i], acc[:, i])
-
+        pos[:, i + 1] = pos[:, i] + step * mass_inv.dot(acting_forces) * (i * step)    # Position
 
 
     plot_pos_vel_acc(pos, vel, acc)
-    # plot_dist(current, wind)
-
-    # fig, ax = plt.subplots(2, 1, sharex=True)
-    # ax[0].plot(cv, label='Current Speed')
-    # ax[0].set_ylabel('Speed (m/s)')
-    #
-    # ax[1].plot(cd, label='Current Direction')
-    # ax[1].set_ylabel('Direction (degrees)')
-    # plt.show()
-
-
-
