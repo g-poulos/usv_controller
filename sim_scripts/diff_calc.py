@@ -49,15 +49,15 @@ def force_on_point(vel, acc):
     h = height_above_surface()
     water_acc = np.array([0, 0])        # TODO: Add water vel
 
-    added_mass_force = Ca * math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
-    added_mass_force = added_mass_force * (-acc)
+    added_mass = Ca * math.pi * water_density * ((R_uc**2) * (H_uc - h) + (R_lc**2) * H_lc)
+    added_mass_force = added_mass * (-acc)
 
-    inertia_force = math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
-    inertia_force = inertia_force * (-water_acc)
+    # inertia_force = math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
+    # inertia_force = inertia_force * (-water_acc)
 
     drag_force = Cd * water_density * (R_uc * (H_uc - h) + R_lc * H_lc)
     drag_force = drag_force * magnitude * (-vel)
-    # print(f"Added mass: {added_mass_force}")
+    print(f"Added mass: {added_mass_force}")
     # print(f"Inertia {inertia_force}")
     # print(f"Drag {drag_force}")
     return drag_force
@@ -78,16 +78,28 @@ def hydrodynamics(vel, acc):
 
     force = q_a[0] + q_b[0] + q_c[0]
     torque = q_a[1] + q_b[1] + q_c[1]
-    print()
-    print(q_a[0], q_b[0], q_c[0])
-    print(q_a[1], q_b[1], q_c[1])
+    # print()
+    # print(q_a[0], q_b[0], q_c[0])
+    # print(q_a[1], q_b[1], q_c[1])
     return np.append(force, torque)
+
+
+def q_B(r):
+    h = height_above_surface()
+
+    added_mass = - Ca * math.pi * water_density * ((R_uc**2) * (H_uc - h) + (R_lc**2) * H_lc)
+    q_b = np.array([added_mass * ((2*d_ad) - (3*d_ae)) * (r**2),
+                    added_mass * (((3/2)*L_bc)-(3*d_bf)) * (r**2),
+                    0])
+    print(q_b)
+    return q_b
 
 
 # (Eq. 8f)
 def get_mass_matrix():
     mass_matrix = np.zeros((3, 3))
-    m_a = - Ca * math.pi * 1025 * (R_uc ** 2 * (H_uc + R_lc ** 2 * H_lc))
+    h = height_above_surface()
+    m_a = - Ca * math.pi * water_density * ((R_uc**2) * (H_uc - h) + (R_lc**2) * H_lc)
 
     mass_matrix[0][0] = mass_matrix[1][1] = m - m_a
     mass_matrix[0][1] = mass_matrix[1][0] = 0
@@ -151,10 +163,10 @@ if __name__ == '__main__':
 
     wrench_info = read_csv("current_table.csv")
 
-    engine_thrust = np.array([0, 0, 40])
+    engine_thrust = np.array([0, 200, 0])
 
     step = 0.01
-    it = int((0.01 * 100) * 3600)
+    it = int((0.01 * 100) * 20)
 
     acc = np.zeros((3, it))
     vel = np.zeros((3, it))
@@ -177,7 +189,7 @@ if __name__ == '__main__':
         # print(hydrodynamics(vel[:, i], acc[:, i]))
 
         # Acceleration
-        acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i])
+        acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i]) + q_B(vel[2, i])
         acc[:, i + 1] = mass_inv.dot(acting_forces)
 
         # Velocity
