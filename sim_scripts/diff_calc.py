@@ -1,9 +1,7 @@
 import math
 import matplotlib.pyplot as plt
-import numpy as np
 from disturbances import IntegratedWhiteNoise, WrenchInfo, read_csv, calculate_wrench
 import os
-from constants import *
 from kinematics import *
 
 
@@ -62,7 +60,7 @@ def force_on_point(vel, acc):
     # print(f"Added mass: {added_mass_force}")
     # print(f"Inertia {inertia_force}")
     # print(f"Drag {drag_force}")
-    return added_mass_force + inertia_force + drag_force
+    return drag_force
 
 
 def hydrodynamics(vel, acc):
@@ -80,8 +78,9 @@ def hydrodynamics(vel, acc):
 
     force = q_a[0] + q_b[0] + q_c[0]
     torque = q_a[1] + q_b[1] + q_c[1]
-    # print(acc)
-    # print(q_a[1], q_b[1], q_c[1])
+    print()
+    print(q_a[0], q_b[0], q_c[0])
+    print(q_a[1], q_b[1], q_c[1])
     return np.append(force, torque)
 
 
@@ -105,7 +104,7 @@ def get_engine_vectored_thrust(i):
 
 
 def plot_pos_vel_acc(pos, vel, acc):
-    fig, ax = plt.subplots(3, 3, sharex=True)
+    fig, ax = plt.subplots(3, 3, sharex=True, sharey=False)
     ax[0, 0].plot(range(it), pos[0, :])
     ax[0, 1].plot(range(it), pos[1, :])
     ax[0, 2].plot(range(it), pos[2, :])
@@ -152,7 +151,7 @@ if __name__ == '__main__':
 
     wrench_info = read_csv("current_table.csv")
 
-    engine_thrust = np.array([0, 100, 0])
+    engine_thrust = np.array([0, 0, 40])
 
     step = 0.01
     it = int((0.01 * 100) * 3600)
@@ -177,10 +176,16 @@ if __name__ == '__main__':
         # q_dist = current[:, i]
         # print(hydrodynamics(vel[:, i], acc[:, i]))
 
+        # Acceleration
         acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i])
-        acc[:, i + 1] = mass_inv.dot(acting_forces)                                     # Acceleration
-        vel[:, i + 1] = vel[:, i] + step * mass_inv.dot(acting_forces)                  # Velocity
-        pos[:, i + 1] = pos[:, i] + step * mass_inv.dot(acting_forces) * (i * step)    # Position
+        acc[:, i + 1] = mass_inv.dot(acting_forces)
+
+        # Velocity
+        vel[:, i + 1] = vel[:, i] + step * mass_inv.dot(acting_forces)
+
+        # Position
+        vel_I = get_rotation_matrix(pos[2, i]).dot(vel[:, i])
+        pos[:, i + 1] = pos[:, i] + step * vel_I * (i * step)
 
 
     plot_pos_vel_acc(pos, vel, acc)
