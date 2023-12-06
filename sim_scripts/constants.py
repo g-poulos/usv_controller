@@ -39,12 +39,3 @@ psi_s = 10          # (deg)   Start direction
 u_s = 0.10          # (m/s)   Start surge velocity
 v_s = -0.10         # (m/s)   Start sway velocity
 r_s = 0.01          # (rad/s) Start yaw velocity
-
-
-############### Current Values ###############
-x = x_s
-y = y_s
-psi = psi_s
-u = u_s
-v = v_s
-r = r_s
