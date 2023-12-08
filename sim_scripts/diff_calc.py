@@ -1,8 +1,12 @@
 import math
 import matplotlib.pyplot as plt
 from disturbances import IntegratedWhiteNoise, WrenchInfo, read_csv, calculate_wrench
-import os
 from kinematics import *
+
+
+# Duplicate function to avoid 'Code Unreachable' bug
+def cross(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    return np.cross(a, b)
 
 
 def dist_to_force(speed, direction, model_velocity, mode):   # (Eq. 15)
@@ -46,34 +50,32 @@ def vector_to_xy_components(speed, direction):
 # Eq. 5a
 def force_on_point(vel, acc):
     magnitude = np.linalg.norm(vel)
-    h = height_above_surface()
     water_acc = np.array([0, 0])        # TODO: Add water vel
 
-    added_mass = Ca * math.pi * water_density * ((R_uc**2) * (H_uc - h) + (R_lc**2) * H_lc)
-    added_mass_force = added_mass * (-acc)
+    added_mass_force = m_a * (-acc)
 
     # inertia_force = math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
     # inertia_force = inertia_force * (-water_acc)
 
     drag_force = Cd * water_density * (R_uc * (H_uc - h) + R_lc * H_lc)
     drag_force = drag_force * magnitude * (-vel)
-    print(f"Added mass: {added_mass_force}")
+    # print(f"Added mass: {added_mass_force}")
     # print(f"Inertia {inertia_force}")
     # print(f"Drag {drag_force}")
-    return drag_force
+    return added_mass_force + drag_force
 
 
 def hydrodynamics(vel, acc):
     point_a_force = force_on_point(point_a_vel(vel), point_a_acc(vel, acc))
-    point_a_torque = np.cross(s_a(), point_a_force)
+    point_a_torque = cross(s_a(), point_a_force)
     q_a = [point_a_force, point_a_torque]
 
     point_b_force = force_on_point(point_b_vel(vel), point_b_acc(vel, acc))
-    point_b_torque = np.cross(s_b(), point_b_force)
+    point_b_torque = cross(s_b(), point_b_force)
     q_b = [point_b_force, point_b_torque]
 
     point_c_force = force_on_point(point_c_vel(vel), point_c_acc(vel, acc))
-    point_c_torque = np.cross(s_c(), point_c_force)
+    point_c_torque = cross(s_c(), point_c_force)
     q_c = [point_c_force, point_c_torque]
 
     force = q_a[0] + q_b[0] + q_c[0]
@@ -81,38 +83,21 @@ def hydrodynamics(vel, acc):
     # print()
     # print(q_a[0], q_b[0], q_c[0])
     # print(q_a[1], q_b[1], q_c[1])
+    print(np.append(force, torque))
     return np.append(force, torque)
-
-
-def q_B(r):
-    h = height_above_surface()
-
-    added_mass = - Ca * math.pi * water_density * ((R_uc**2) * (H_uc - h) + (R_lc**2) * H_lc)
-    q_b = np.array([added_mass * ((2*d_ad) - (3*d_ae)) * (r**2),
-                    added_mass * (((3/2)*L_bc)-(3*d_bf)) * (r**2),
-                    0])
-    print(q_b)
-    return q_b
 
 
 # (Eq. 8f)
 def get_mass_matrix():
     mass_matrix = np.zeros((3, 3))
-    h = height_above_surface()
-    m_a = - Ca * math.pi * water_density * ((R_uc**2) * (H_uc - h) + (R_lc**2) * H_lc)
 
     mass_matrix[0][0] = mass_matrix[1][1] = m - m_a
     mass_matrix[0][1] = mass_matrix[1][0] = 0
     mass_matrix[0][2] = mass_matrix[2][0] = 3 * (d_bf - (L_bc / 2)) * m_a
-    mass_matrix[1][2] = mass_matrix[2][1] = (2 * d_ad - 3 * d_ae) * m_a
-    mass_matrix[2][2] = I_zz + m_a * (- 2*d_ad + 4*d_ad*d_ae - 3*(d_ae**2) - (5/4)*(L_bc**2) + 3*L_bc*d_bf - 3*(d_bf**2))
+    mass_matrix[1][2] = mass_matrix[2][1] = ((2 * d_ad) - (3 * d_ae)) * m_a
+    mass_matrix[2][2] = I_zz + m_a * (- (2*d_ad) + (4*d_ad*d_ae) - 3*(d_ae**2)
+                                      - (5/4)*(L_bc**2) + (3*L_bc*d_bf) - (3*(d_bf**2)))
     return mass_matrix
-
-
-# (Eq. 7b)
-def get_engine_vectored_thrust(i):
-    return np.exp(i)
-    # return np.array([100, 100, 0])
 
 
 def plot_pos_vel_acc(pos, vel, acc):
@@ -155,18 +140,17 @@ def plot_dist(current, wind):
 
 
 if __name__ == '__main__':
-    current_velocity = IntegratedWhiteNoise(0, 0.514, 0.1, 1)
-    current_direction = IntegratedWhiteNoise(0, 360, 140, 6)
+    current_velocity = IntegratedWhiteNoise(0, 0.314, 0.1, 1)
+    current_direction = IntegratedWhiteNoise(90, 100, 95, 6)
+
     wind_velocity = IntegratedWhiteNoise(0, 7.716, 2, 2)
     wind_direction = IntegratedWhiteNoise(0, 360, 270, 6)
     mass_inv = np.linalg.inv(get_mass_matrix())
 
-    wrench_info = read_csv("current_table.csv")
-
-    engine_thrust = np.array([0, 200, 0])
+    engine_thrust = np.array([0, 0, 10])
 
     step = 0.01
-    it = int((0.01 * 100) * 20)
+    it = int((0.01 * 100) * 3600)
 
     acc = np.zeros((3, it))
     vel = np.zeros((3, it))
@@ -179,24 +163,22 @@ if __name__ == '__main__':
         # wind_dir = wind_direction.get_value()
         # wind[:, i] = dist_to_force(wind_speed, wind_dir, vel[:, i], mode="wind")
 
-        # current_speed = current_velocity.get_value()
-        # current_dir = current_direction.get_value()
-        # current[:, i] = dist_to_force(current_speed, current_dir, vel[:, i], mode="current")
-        #
-        # calculate_wrench(pos[:, i], vel[:2, i], current_speed, current_dir, wrench_info)
-        #
-        # q_dist = current[:, i]
-        # print(hydrodynamics(vel[:, i], acc[:, i]))
+        current_speed = current_velocity.get_value()
+        current_dir = current_direction.get_value()
+        current[:, i] = dist_to_force(current_speed, current_dir, vel[:, i], mode="current")
+
+        q_dist = current[:, i]
+        # print(q_dist)
 
         # Acceleration
-        acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i]) + q_B(vel[2, i])
-        acc[:, i + 1] = mass_inv.dot(acting_forces)
+        acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i])
+        acc[:, i + 1] = mass_inv @ acting_forces
 
         # Velocity
-        vel[:, i + 1] = vel[:, i] + step * mass_inv.dot(acting_forces)
+        vel[:, i + 1] = vel[:, i] + step * (mass_inv @ acting_forces)
 
         # Position
-        vel_I = get_rotation_matrix(pos[2, i]).dot(vel[:, i])
+        vel_I = get_rotation_matrix(pos[2, i]) @ vel[:, i]
         pos[:, i + 1] = pos[:, i] + step * vel_I * (i * step)
 
 

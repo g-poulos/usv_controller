@@ -11,17 +11,17 @@ def get_rotation_matrix(angle):
 
 # Eq. 2a
 def s_a():
-    return [d_ae, d_bf-(L_bc/2)]
+    return np.array([d_ae, d_bf-(L_bc/2)])
 
 
 # Eq. 2b
 def s_b():
-    return [-(d_ad-d_ae), d_bf]
+    return np.array([-(d_ad-d_ae), d_bf])
 
 
 # Eq. 2c
 def s_c():
-    return [-(d_ad-d_ae), d_bf-L_bc]
+    return np.array([-(d_ad-d_ae), d_bf-L_bc])
 
 
 # Eq. 3a

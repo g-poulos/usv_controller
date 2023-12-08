@@ -13,7 +13,7 @@ L_ac = 4.5          # Length of the triangular side
 
 d_ad = np.sqrt(L_ac ** 2 - (L_bc / 2) ** 2)
 d_bf = L_bc / 2
-d_ae = d_ad * 2 / 3
+d_ae = d_ad * (2 / 3)
 L = np.sqrt((L_ac**2) - ((L_bc/2)**2))  # Overall length
 
 I_zz = 1488.504
@@ -31,6 +31,10 @@ water_density = 1025    # Water density
 air_density = 1.222     # Air density
 Ca = 0.8                # Added mass coefficient
 Cd = 0.8                # Drag coefficient
+
+# Eq. 4
+h = H_uc - (1/(R_uc**2)) * (m / (3 * np.pi * water_density) - (R_lc ** 2) * H_lc)
+m_a = Ca * np.pi * water_density * (((R_uc**2) * (H_uc - h)) + ((R_lc**2) * H_lc))
 
 ############### Initial Values ###############
 x_s = 5             # (m)     Start position in X axis
