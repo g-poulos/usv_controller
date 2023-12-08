@@ -1,5 +1,7 @@
 import math
 import matplotlib.pyplot as plt
+import numpy as np
+
 from disturbances import IntegratedWhiteNoise, WrenchInfo, read_csv, calculate_wrench
 from kinematics import *
 
@@ -49,19 +51,19 @@ def vector_to_xy_components(speed, direction):
 
 # Eq. 5a
 def force_on_point(vel, acc):
-    magnitude = np.linalg.norm(vel)
     water_acc = np.array([0, 0])        # TODO: Add water vel
-
     added_mass_force = m_a * (-acc)
 
     # inertia_force = math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
     # inertia_force = inertia_force * (-water_acc)
 
     drag_force = Cd * water_density * (R_uc * (H_uc - h) + R_lc * H_lc)
-    drag_force = drag_force * magnitude * (-vel)
+    drag_force = drag_force * np.linalg.norm(-vel) * (-vel)
     # print(f"Added mass: {added_mass_force}")
     # print(f"Inertia {inertia_force}")
     # print(f"Drag {drag_force}")
+
+    # print(added_mass_force, drag_force)
     return added_mass_force + drag_force
 
 
@@ -78,12 +80,14 @@ def hydrodynamics(vel, acc):
     point_c_torque = cross(s_c(), point_c_force)
     q_c = [point_c_force, point_c_torque]
 
+    # print(q_a, q_b, q_c)
     force = q_a[0] + q_b[0] + q_c[0]
     torque = q_a[1] + q_b[1] + q_c[1]
+    # print(force, torque)
+    # print()
     # print()
     # print(q_a[0], q_b[0], q_c[0])
     # print(q_a[1], q_b[1], q_c[1])
-    print(np.append(force, torque))
     return np.append(force, torque)
 
 
@@ -147,14 +151,14 @@ if __name__ == '__main__':
     wind_direction = IntegratedWhiteNoise(0, 360, 270, 6)
     mass_inv = np.linalg.inv(get_mass_matrix())
 
-    engine_thrust = np.array([0, 0, 10])
+    engine_thrust = np.array([1000, 0, 0])
 
     step = 0.01
-    it = int((0.01 * 100) * 3600)
+    it = int(100 * 60) * 20
 
-    acc = np.zeros((3, it))
-    vel = np.zeros((3, it))
-    pos = np.zeros((3, it))
+    acc = np.zeros((3, it), dtype=np.float64)
+    vel = np.zeros((3, it), dtype=np.float64)
+    pos = np.zeros((3, it), dtype=np.float64)
     current = np.zeros((3, it))
     wind = np.zeros((3, it))
 
@@ -179,7 +183,14 @@ if __name__ == '__main__':
 
         # Position
         vel_I = get_rotation_matrix(pos[2, i]) @ vel[:, i]
-        pos[:, i + 1] = pos[:, i] + step * vel_I * (i * step)
+        pos[:, i + 1] = pos[:, i] + step * vel_I
+
+        # print(f"\n ------- Iteration {i} ------- :")
+        # print(f"Acting Forces: {acting_forces}")
+        # print(f"Acceleration: {acc[:, i + 1]}")
+        # print(f"Velocity: {vel[:, i + 1]}")
+        # print(f"Position: {pos[:, i + 1]}")
+        # print()
 
 
     plot_pos_vel_acc(pos, vel, acc)
