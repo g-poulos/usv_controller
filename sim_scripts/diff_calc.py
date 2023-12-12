@@ -2,45 +2,13 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 
-from disturbances import IntegratedWhiteNoise, WrenchInfo, read_csv, calculate_wrench
+from disturbances import IntegratedWhiteNoise, read_csv, calculate_wrench
 from kinematics import *
 
 
 # Duplicate function to avoid 'Code Unreachable' bug
 def cross(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     return np.cross(a, b)
-
-
-def dist_to_force(speed, direction, model_velocity, mode):   # (Eq. 15)
-    C = 1
-
-    if mode == "wind":
-        density = air_density
-        At = At_upper
-        Al = Al_upper
-    elif mode == "current":
-        density = water_density
-        At = At_lower
-        Al = Al_lower
-    else:
-        print("Invalid force mode")
-        return
-
-    relative_velocity = vector_to_xy_components(speed, direction) - model_velocity[:2]
-    x_mag = np.linalg.norm(relative_velocity[0])
-    y_mag = np.linalg.norm(relative_velocity[1])
-
-    magnitude = np.linalg.norm(relative_velocity)
-    force_x = 0.5 * C * density * relative_velocity[0] * x_mag * At
-    force_y = 0.5 * C * density * relative_velocity[1] * y_mag * Al
-    moment_z = 0.5 * C * density * (magnitude**2) * Al * L
-
-    # print(f"Model Vel: {model_velocity}")
-    # print(f"Dist Vel: {vector_to_xy_components(speed, direction)}")
-    # print(f"Relative Vel: {relative_velocity}")
-    # print(f"Magnitude: {magnitude}")
-
-    return np.array([force_x, force_y, 0])
 
 
 def vector_to_xy_components(speed, direction):
@@ -144,17 +112,18 @@ def plot_dist(current, wind):
 
 
 if __name__ == '__main__':
-    current_velocity = IntegratedWhiteNoise(0, 0.314, 0.1, 1)
-    current_direction = IntegratedWhiteNoise(90, 100, 95, 6)
+    current_velocity = IntegratedWhiteNoise(0, 0.114, 0.1, 1)
+    current_direction = IntegratedWhiteNoise(0, 0, 0, 6)
 
     wind_velocity = IntegratedWhiteNoise(0, 7.716, 2, 2)
     wind_direction = IntegratedWhiteNoise(0, 360, 270, 6)
+    wind_wrench_info = read_csv("wind_table.csv")
+
     mass_inv = np.linalg.inv(get_mass_matrix())
 
-    engine_thrust = np.array([1000, 0, 0])
-
     step = 0.01
-    it = int(100 * 60) * 20
+    minutes = 1
+    it = int(100 * 10)
 
     acc = np.zeros((3, it), dtype=np.float64)
     vel = np.zeros((3, it), dtype=np.float64)
@@ -162,17 +131,23 @@ if __name__ == '__main__':
     current = np.zeros((3, it))
     wind = np.zeros((3, it))
 
+    engine_thrust = np.array([110, 0, 0])
+    # engine_thrust = np.full((3, it), 0)
+    # engine_thrust[0, :it // 2] = 500
+    # engine_thrust[1, :it // 2] = 500
+
     for i in range(it - 1):
-        # wind_speed = wind_velocity.get_value()
-        # wind_dir = wind_direction.get_value()
-        # wind[:, i] = dist_to_force(wind_speed, wind_dir, vel[:, i], mode="wind")
+        wind_speed = wind_velocity.get_value()
+        wind_dir = wind_direction.get_value()
+        wind[:, i] = calculate_wrench(pos[:, i], vel[:, i], wind_speed,
+                                      wind_dir, wind_wrench_info, mode="wind")
 
-        current_speed = current_velocity.get_value()
-        current_dir = current_direction.get_value()
-        current[:, i] = dist_to_force(current_speed, current_dir, vel[:, i], mode="current")
+        # current_speed = current_velocity.get_value()
+        # current_dir = current_direction.get_value()
+        # current[:, i] =
 
-        q_dist = current[:, i]
-        # print(q_dist)
+        q_dist = wind[:, i]
+        print(q_dist)
 
         # Acceleration
         acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i])
@@ -191,6 +166,5 @@ if __name__ == '__main__':
         # print(f"Velocity: {vel[:, i + 1]}")
         # print(f"Position: {pos[:, i + 1]}")
         # print()
-
 
     plot_pos_vel_acc(pos, vel, acc)
