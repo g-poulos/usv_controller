@@ -63,7 +63,7 @@ def hydrodynamics(vel, acc):
 def get_mass_matrix():
     mass_matrix = np.zeros((3, 3))
 
-    mass_matrix[0][0] = mass_matrix[1][1] = m - m_a
+    mass_matrix[0][0] = mass_matrix[1][1] = m + (3*m_a)
     mass_matrix[0][1] = mass_matrix[1][0] = 0
     mass_matrix[0][2] = mass_matrix[2][0] = 3 * (d_bf - (L_bc / 2)) * m_a
     mass_matrix[1][2] = mass_matrix[2][1] = ((2 * d_ad) - (3 * d_ae)) * m_a
@@ -83,12 +83,23 @@ def plot_pos_vel_acc(pos, vel, acc):
     ax[2, 0].plot(range(it), acc[0, :])
     ax[2, 1].plot(range(it), acc[1, :])
     ax[2, 2].plot(range(it), acc[2, :])
-    ax[0, 0].set_title('Position X-Axis')
-    ax[0, 1].set_title('Position Y-Axis')
-    ax[0, 2].set_title('Orientation Z-Axis')
-    ax[1, 0].set_title('Linear Velocity X-Axis')
-    ax[1, 1].set_title('Linear Velocity Y-Axis')
-    ax[1, 2].set_title('Angular Velocity Z-Axis')
+    ax[0, 0].set_title('X-Axis Position')
+    ax[0, 1].set_title('Y-Axis Position')
+    ax[0, 2].set_title('Z-Axis Orientation ')
+    ax[0, 0].set_ylabel('Distance (m)')
+
+    ax[1, 0].set_title('X-Axis Linear Velocity')
+    ax[1, 1].set_title('Y-Axis Linear Velocity')
+    ax[1, 2].set_title('Z-Axis Angular Velocity')
+    ax[1, 0].set_ylabel('m/s')
+
+    ax[2, 0].set_title('X-Axis Linear Acceleration')
+    ax[2, 1].set_title('Y-Axis Linear Acceleration')
+    ax[2, 2].set_title('Z-Axis Angular Acceleration')
+    ax[2, 0].set_ylabel('m/s^2')
+
+    fig.text(0.5, 0.04, 'Time (ms)', ha='center', va='center', size='large')
+
     for i in range(3):
         for j in range(3):
             ax[i, j].grid(True)
@@ -123,7 +134,7 @@ if __name__ == '__main__':
 
     step = 0.01
     minutes = 1
-    it = int(100 * 10)
+    it = int(100 * 60) * minutes
 
     acc = np.zeros((3, it), dtype=np.float64)
     vel = np.zeros((3, it), dtype=np.float64)
@@ -131,10 +142,10 @@ if __name__ == '__main__':
     current = np.zeros((3, it))
     wind = np.zeros((3, it))
 
-    engine_thrust = np.array([110, 0, 0])
-    # engine_thrust = np.full((3, it), 0)
-    # engine_thrust[0, :it // 2] = 500
-    # engine_thrust[1, :it // 2] = 500
+    # engine_thrust = np.array([0, 0, 100])
+    engine_thrust = np.full((3, it), 0)
+    engine_thrust[0, :it // 2] = 500
+    engine_thrust[1, :it // 2] = 500
 
     for i in range(it - 1):
         wind_speed = wind_velocity.get_value()
@@ -147,10 +158,10 @@ if __name__ == '__main__':
         # current[:, i] =
 
         q_dist = wind[:, i]
-        print(q_dist)
+        # print(q_dist)
 
         # Acceleration
-        acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i])
+        acting_forces = engine_thrust[:, i] + hydrodynamics(vel[:, i], acc[:, i])
         acc[:, i + 1] = mass_inv @ acting_forces
 
         # Velocity
