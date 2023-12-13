@@ -123,11 +123,12 @@ def plot_dist(current, wind):
 
 
 if __name__ == '__main__':
-    current_velocity = IntegratedWhiteNoise(0, 0.114, 0.1, 1)
-    current_direction = IntegratedWhiteNoise(0, 0, 0, 6)
+    current_velocity = IntegratedWhiteNoise(0, 0.514, 0.1, 1)
+    current_direction = IntegratedWhiteNoise(90, 90, 90, 0)
+    current_wrench_info = read_csv("current_table.csv")
 
     wind_velocity = IntegratedWhiteNoise(0, 7.716, 2, 2)
-    wind_direction = IntegratedWhiteNoise(0, 360, 270, 6)
+    wind_direction = IntegratedWhiteNoise(0, 0, 0, 0)
     wind_wrench_info = read_csv("wind_table.csv")
 
     mass_inv = np.linalg.inv(get_mass_matrix())
@@ -141,11 +142,12 @@ if __name__ == '__main__':
     pos = np.zeros((3, it), dtype=np.float64)
     current = np.zeros((3, it))
     wind = np.zeros((3, it))
+    water_vel = np.zeros((2, it+1))
 
-    # engine_thrust = np.array([0, 0, 100])
-    engine_thrust = np.full((3, it), 0)
-    engine_thrust[0, :it // 2] = 500
-    engine_thrust[1, :it // 2] = 500
+    engine_thrust = np.array([0, 0, 0])
+    # engine_thrust = np.full((3, it), 0)
+    # engine_thrust[0, :it // 2] = 500
+    # engine_thrust[1, :it // 2] = 500
 
     for i in range(it - 1):
         wind_speed = wind_velocity.get_value()
@@ -153,15 +155,22 @@ if __name__ == '__main__':
         wind[:, i] = calculate_wrench(pos[:, i], vel[:, i], wind_speed,
                                       wind_dir, wind_wrench_info, mode="wind")
 
-        # current_speed = current_velocity.get_value()
-        # current_dir = current_direction.get_value()
-        # current[:, i] =
+        current_speed = current_velocity.get_value()
+        current_dir = current_direction.get_value()
+        current[:, i] = calculate_wrench(pos[:, i], vel[:, i], current_speed,
+                                         current_dir, current_wrench_info, mode="current")
 
-        q_dist = wind[:, i]
-        # print(q_dist)
+        water_vel[:, i+1] = vector_to_xy_components(current_speed, current_dir)
+        print(f"Vel: {water_vel[:, i+1]}")
+        print(f"Acc: {(water_vel[:, i+1] - water_vel[:, i])/0.01}")
+
+        # q_dist = wind[:, i]
+        # q_dist = current[:, i]
+        q_dist = wind[:, i] + current[:, i]
+        print(q_dist)
 
         # Acceleration
-        acting_forces = engine_thrust[:, i] + hydrodynamics(vel[:, i], acc[:, i])
+        acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i]) + q_dist
         acc[:, i + 1] = mass_inv @ acting_forces
 
         # Velocity

@@ -29,7 +29,7 @@ Al_lower = 0.4196491616786311   # Lateral projected area
 ############### Coefficients and Constants ###############
 water_density = 1025    # Water density
 air_density = 1.222     # Air density
-Ca = 0.6                # Added mass coefficient
+Ca = 0.8                # Added mass coefficient
 Cd = 0.8                # Drag coefficient
 
 # Eq. 4
