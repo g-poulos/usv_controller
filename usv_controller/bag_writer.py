@@ -14,7 +14,7 @@ class SimpleBagRecorder(Node):
         self.writer = rosbag2_py.SequentialWriter()
 
         storage_options = rosbag2_py._storage.StorageOptions(
-            uri=f'src/usv_controller/bagfiles/record{RECORD_NUM}',
+            uri=f'bagfiles/record{RECORD_NUM}',
             storage_id='mcap')
         converter_options = rosbag2_py._storage.ConverterOptions('cdr', 'cdr')
         self.writer.open(storage_options, converter_options)
@@ -32,7 +32,7 @@ class SimpleBagRecorder(Node):
         self.writer.create_topic(wave_torque_topic_info)
 
         odom_topic_info = rosbag2_py._storage.TopicMetadata(
-            name='/model/boat/odometry',
+            name='/model/vereniki/odometry',
             type='nav_msgs/msg/Odometry',
             serialization_format='cdr')
         self.writer.create_topic(odom_topic_info)
@@ -51,7 +51,7 @@ class SimpleBagRecorder(Node):
 
         self.odom_subscription = self.create_subscription(
             Odometry,
-            "/model/boat/odometry",
+            "/model/vereniki/odometry",
             self.pose_callback,
             10)
 
@@ -69,7 +69,7 @@ class SimpleBagRecorder(Node):
 
     def pose_callback(self, msg):
         self.writer.write(
-            "/model/boat/odometry",
+            "/model/vereniki/odometry",
             serialize_message(msg),
             self.get_clock().now().nanoseconds)
 
