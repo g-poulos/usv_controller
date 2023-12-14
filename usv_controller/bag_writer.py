@@ -3,9 +3,13 @@ from rclpy.node import Node
 from rclpy.serialization import serialize_message
 from geometry_msgs.msg import Vector3
 from nav_msgs.msg import Odometry
+from rosgraph_msgs.msg import Clock
 import rosbag2_py
 import os
+
+
 RECORD_NUM = 0
+sbr = None
 
 
 class SimpleBagRecorder(Node):
@@ -55,6 +59,12 @@ class SimpleBagRecorder(Node):
             self.pose_callback,
             10)
 
+        self.clock_subscription = self.create_subscription(
+            Clock,
+            "/clock",
+            self.clock_callback,
+            10)
+
     def wave_force_callback(self, msg):
         self.writer.write(
             '/wave/force',
@@ -73,6 +83,13 @@ class SimpleBagRecorder(Node):
             serialize_message(msg),
             self.get_clock().now().nanoseconds)
 
+    def clock_callback(self, msg):
+        self.get_logger().info(f"Sim time: {msg.clock.sec}", throttle_duration_sec=1)
+        if msg.clock.sec > 60:
+            if sbr:
+                sbr.destroy_node()
+                rclpy.shutdown()
+
 
 def count_records(path):
     print(path)
@@ -84,13 +101,17 @@ def count_records(path):
 
 
 def main(args=None):
-    global RECORD_NUM
-    RECORD_NUM = count_records(os.path.dirname(os.path.realpath(__file__)) + "/../bagfiles")
-    print(RECORD_NUM)
-    rclpy.init(args=args)
+    global RECORD_NUM, sbr
+
+    RECORD_NUM = count_records(
+        os.path.dirname(os.path.realpath(__file__)) + "/../bagfiles")
+    print(f"Writing record: record{RECORD_NUM}")
+
+    rclpy.init()
+    executor = rclpy.executors.SingleThreadedExecutor()
     sbr = SimpleBagRecorder()
-    rclpy.spin(sbr)
-    rclpy.shutdown()
+    executor.add_node(sbr)
+    executor.spin()
 
 
 if __name__ == '__main__':

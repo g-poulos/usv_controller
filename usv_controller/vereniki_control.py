@@ -50,7 +50,7 @@ class VerenikiControllerNode(Node):
         self.timer = self.create_timer(1, self.send_thrust_command)
 
     def send_thrust_command(self):
-        msgs = get_thrust_msgs(np.array([0, 0, 0]))
+        msgs = get_thrust_msgs(np.array([300, 0, 0]))
 
         thrustA_msg = Float64()
         directionA_msg = Float64()
@@ -74,11 +74,22 @@ class VerenikiControllerNode(Node):
         self.steerB_publisher.publish(directionB_msg)
         self.steerC_publisher.publish(directionC_msg)
 
-        self.get_logger().info("Thrust info: " + str(msgs))
+        self.get_logger().info("Thrust info: " + str(msgs) + str(self.timer))
 
 
-def main(args=None):
-    rclpy.init(args=args)
-    node = VerenikiControllerNode()
-    rclpy.spin(node)
-    rclpy.shutdown()
+# def main(args=None):
+#     rclpy.init(args=args)
+#     node = VerenikiControllerNode()
+#     rclpy.spin(node)
+#     rclpy.shutdown()
+
+def main():
+    rclpy.init()
+
+    executor = rclpy.executors.SingleThreadedExecutor()
+    lc_node = VerenikiControllerNode()
+    executor.add_node(lc_node)
+    try:
+        executor.spin()
+    except (KeyboardInterrupt, rclpy.executors.ExternalShutdownException):
+        lc_node.destroy_node()
