@@ -7,6 +7,7 @@
   <maintainer email="cs04480@uoi.gr">g-poulos</maintainer>
   <license>TODO: License declaration</license>
 
+  <depend>numpy</depend>
   <depend>rclpy</depend>
   <depend>geometry_msgs</depend>
   <depend>sensor_msgs</depend>

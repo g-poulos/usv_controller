@@ -22,7 +22,8 @@ setup(
         'console_scripts': [
             "wave_subscriber = usv_controller.wave_subscriber:main",
             "boat_controller = usv_controller.boat_control:main",
-            "bag_writer = usv_controller.bag_writer:main"
+            "bag_writer = usv_controller.bag_writer:main",
+            "vereniki_controller = usv_controller.vereniki_control:main"
         ],
     },
 )
