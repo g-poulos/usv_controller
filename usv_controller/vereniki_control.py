@@ -26,6 +26,10 @@ def get_thrust_msgs(input_vec):
     return J_star_plus @ q_star.T
 
 
+def thrust_to_rotations(thrust):
+    return np.sqrt(thrust / (1025 * 0.01 * (0.48 ** 4)))
+
+
 class VerenikiControllerNode(Node):
     def __init__(self):
         super().__init__("vereniki_controller")
@@ -33,11 +37,11 @@ class VerenikiControllerNode(Node):
 
         # Thrusters
         self.thrustA_publisher = self.create_publisher(
-            Float64, "/model/vereniki/joint/propeller_jointA/cmd_thrust", 10)
+            Float64, "/model/vereniki/joint/propeller_jointA/cmd_vel", 10)
         self.thrustB_publisher = self.create_publisher(
-            Float64, "/model/vereniki/joint/propeller_jointB/cmd_thrust", 10)
+            Float64, "/model/vereniki/joint/propeller_jointB/cmd_vel", 10)
         self.thrustC_publisher = self.create_publisher(
-            Float64, "/model/vereniki/joint/propeller_jointC/cmd_thrust", 10)
+            Float64, "/model/vereniki/joint/propeller_jointC/cmd_vel", 10)
 
         # Steering
         self.steerA_publisher = self.create_publisher(
@@ -50,7 +54,7 @@ class VerenikiControllerNode(Node):
         self.timer = self.create_timer(1, self.send_thrust_command)
 
     def send_thrust_command(self):
-        msgs = get_thrust_msgs(np.array([300, 0, 0]))
+        msgs = get_thrust_msgs(np.array([100, 0, 200]))
 
         thrustA_msg = Float64()
         directionA_msg = Float64()
@@ -59,11 +63,11 @@ class VerenikiControllerNode(Node):
         thrustC_msg = Float64()
         directionC_msg = Float64()
 
-        thrustA_msg.data = msgs[0]
+        thrustA_msg.data = thrust_to_rotations(msgs[0])
         directionA_msg.data = np.radians(msgs[1])
-        thrustB_msg.data = msgs[2]
+        thrustB_msg.data = thrust_to_rotations(msgs[2])
         directionB_msg.data = np.radians(msgs[3])
-        thrustC_msg.data = msgs[4]
+        thrustC_msg.data = thrust_to_rotations(msgs[4])
         directionC_msg.data = np.radians(msgs[5])
 
         self.thrustA_publisher.publish(thrustA_msg)
@@ -74,7 +78,7 @@ class VerenikiControllerNode(Node):
         self.steerB_publisher.publish(directionB_msg)
         self.steerC_publisher.publish(directionC_msg)
 
-        self.get_logger().info("Thrust info: " + str(msgs) + str(self.timer))
+        self.get_logger().info("Thrust info: " + str(msgs))
 
 
 # def main(args=None):
