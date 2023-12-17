@@ -4,6 +4,7 @@ from rclpy.serialization import serialize_message
 from geometry_msgs.msg import Vector3
 from nav_msgs.msg import Odometry
 from rosgraph_msgs.msg import Clock
+from sensor_msgs.msg import Imu
 import rosbag2_py
 import os
 
@@ -41,6 +42,12 @@ class SimpleBagRecorder(Node):
             serialization_format='cdr')
         self.writer.create_topic(odom_topic_info)
 
+        imu_topic_info = rosbag2_py._storage.TopicMetadata(
+            name='/model/vereniki/imu',
+            type='sensor_msgs/msg/Imu',
+            serialization_format='cdr')
+        self.writer.create_topic(imu_topic_info)
+
         self.wave_force_subscription = self.create_subscription(
             Vector3,
             "/wave/force",
@@ -63,6 +70,12 @@ class SimpleBagRecorder(Node):
             Clock,
             "/clock",
             self.clock_callback,
+            10)
+
+        self.imu_subscription = self.create_subscription(
+            Imu,
+            "/model/vereniki/imu",
+            self.imu_callback,
             10)
 
     def wave_force_callback(self, msg):
@@ -89,6 +102,12 @@ class SimpleBagRecorder(Node):
             if sbr:
                 sbr.destroy_node()
                 rclpy.shutdown()
+
+    def imu_callback(self, msg):
+        self.writer.write(
+            "/model/vereniki/imu",
+            serialize_message(msg),
+            self.get_clock().now().nanoseconds)
 
 
 def count_records(path):
