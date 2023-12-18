@@ -21,14 +21,14 @@ def vector_to_xy_components(speed, direction):
 def force_on_point(vel, acc, w_vel, w_acc):
     added_mass_force = m_a * (-acc)
 
-    inertia_force = math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
-    inertia_force = inertia_force * w_acc
+    # inertia_force = math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
+    # inertia_force = inertia_force * w_acc
 
     drag_force = Cd * water_density * (R_uc * (H_uc - h) + R_lc * H_lc)
     drag_force = drag_force * np.linalg.norm(-vel) * (-vel)
 
     # print(f"Added mass: {added_mass_force}")
-    print(f"Inertia {inertia_force}")
+    # print(f"Inertia {inertia_force}")
     # print(f"Drag {drag_force}")
     return added_mass_force + drag_force
 
@@ -120,6 +120,12 @@ def plot_dist(current, wind):
     plt.show()
 
 
+def radians_to_degrees(radians):
+    degrees = math.degrees(radians)
+    degrees = (degrees + 180) % 360 - 180
+    return degrees
+
+
 if __name__ == '__main__':
     current_velocity = IntegratedWhiteNoise(0, 0.514, 0.1, 1)
     current_direction = IntegratedWhiteNoise(90, 90, 90, 0)
@@ -142,7 +148,7 @@ if __name__ == '__main__':
     wind = np.zeros((3, it))
     water_vel = np.zeros((2, it+1))
 
-    engine_thrust = np.array([100, 0, 0])
+    engine_thrust = np.array([100, 0, 150])
     # engine_thrust = np.full((3, it), 0)
     # engine_thrust[0, :it // 2] = 500
     # engine_thrust[1, :it // 2] = 500
@@ -169,9 +175,10 @@ if __name__ == '__main__':
         # q_dist = wind[:, i] + current[:, i]
         # print(q_dist)
 
-        # Acceleration
         acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i],
-                                                      water_vel[:, i+1], water_acc) + q_dist
+                                                      water_vel[:, i+1], water_acc)
+
+        # Acceleration
         acc[:, i + 1] = mass_inv @ acting_forces
 
         # Velocity
@@ -180,6 +187,7 @@ if __name__ == '__main__':
         # Position
         vel_I = get_rotation_matrix(pos[2, i]) @ vel[:, i]
         pos[:, i + 1] = pos[:, i] + step * vel_I
+        pos[2, i] = radians_to_degrees(pos[2, i])
 
         # print(f"\n ------- Iteration {i} ------- :")
         # print(f"Acting Forces: {acting_forces}")
