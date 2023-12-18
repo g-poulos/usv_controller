@@ -11,11 +11,13 @@ import os
 
 RECORD_NUM = 0
 sbr = None
+first_msg = True
+start_time = 0
 
 
 class SimpleBagRecorder(Node):
     def __init__(self):
-        super().__init__('simple_bag_recorder')
+        super().__init__('bag_recorder')
         self.writer = rosbag2_py.SequentialWriter()
 
         storage_options = rosbag2_py._storage.StorageOptions(
@@ -97,11 +99,20 @@ class SimpleBagRecorder(Node):
             self.get_clock().now().nanoseconds)
 
     def clock_callback(self, msg):
-        self.get_logger().info(f"Sim time: {msg.clock.sec}", throttle_duration_sec=1)
-        if msg.clock.sec > 60:
-            if sbr:
-                sbr.destroy_node()
-                rclpy.shutdown()
+        global start_time, first_msg
+        sim_time = msg.clock.sec
+        rec_time = sim_time - start_time
+
+        if first_msg:
+            start_time = sim_time
+            first_msg = False
+
+        if rec_time > 60 and sbr:
+            sbr.destroy_node()
+            rclpy.shutdown()
+
+        self.get_logger().info(f"Sim time: {sim_time}, Rec time: {rec_time}",
+                               throttle_duration_sec=1)
 
     def imu_callback(self, msg):
         self.writer.write(
