@@ -27,7 +27,10 @@ def get_thrust_msgs(input_vec):
 
 
 def thrust_to_rotations(thrust):
-    return np.sqrt(thrust / (1025 * 0.01 * (0.48 ** 4)))
+    rad_s = np.sqrt(abs(thrust) / (1025 * 0.01 * (0.48 ** 4)))
+    if thrust < 0:
+        rad_s = -rad_s
+    return rad_s
 
 
 class VerenikiControllerNode(Node):
@@ -54,7 +57,7 @@ class VerenikiControllerNode(Node):
         self.timer = self.create_timer(1, self.send_thrust_command)
 
     def send_thrust_command(self):
-        msgs = get_thrust_msgs(np.array([100, 0, 200]))
+        msgs = get_thrust_msgs(np.array([100, 0, 40]))
 
         thrustA_msg = Float64()
         directionA_msg = Float64()
@@ -78,14 +81,15 @@ class VerenikiControllerNode(Node):
         self.steerB_publisher.publish(directionB_msg)
         self.steerC_publisher.publish(directionC_msg)
 
-        self.get_logger().info("Thrust info: " + str(msgs))
+        self.get_logger().info("Thrust info (thrust, deg): \n"
+                               f"A: {msgs[0]} {msgs[1]}\n"
+                               f"B: {msgs[2]} {msgs[3]}\n"
+                               f"C: {msgs[4]} {msgs[5]}")
+        self.get_logger().info("Thrust info (rad/s, radians): \n"
+                               f"{thrust_to_rotations(msgs[0])} {np.radians(msgs[1])}\n"
+                               f"{thrust_to_rotations(msgs[2])} {np.radians(msgs[3])}\n"
+                               f"{thrust_to_rotations(msgs[4])} {np.radians(msgs[5])}")
 
-
-# def main(args=None):
-#     rclpy.init(args=args)
-#     node = VerenikiControllerNode()
-#     rclpy.spin(node)
-#     rclpy.shutdown()
 
 def main():
     rclpy.init()
