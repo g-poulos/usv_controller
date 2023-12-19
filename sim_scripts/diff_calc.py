@@ -18,42 +18,32 @@ def vector_to_xy_components(speed, direction):
 
 
 # Eq. 5a
-def force_on_point(vel, acc, w_vel, w_acc):
+def force_on_point(vel, acc):
     added_mass_force = m_a * (-acc)
-
-    # inertia_force = math.pi * water_density * ((R_uc ** 2) * (H_uc - h) + (R_lc ** 2) * H_lc)
-    # inertia_force = inertia_force * w_acc
 
     drag_force = Cd * water_density * (R_uc * (H_uc - h) + R_lc * H_lc)
     drag_force = drag_force * np.linalg.norm(-vel) * (-vel)
 
     # print(f"Added mass: {added_mass_force}")
-    # print(f"Inertia {inertia_force}")
     # print(f"Drag {drag_force}")
     return added_mass_force + drag_force
 
 
-def hydrodynamics(vel, acc, w_vel, w_acc):
-    point_a_force = force_on_point(point_a_vel(vel), point_a_acc(vel, acc), w_vel, w_acc)
+def hydrodynamics(vel, acc):
+    point_a_force = force_on_point(point_a_vel(vel), point_a_acc(vel, acc))
     point_a_torque = cross(s_a(), point_a_force)
     q_a = [point_a_force, point_a_torque]
 
-    point_b_force = force_on_point(point_b_vel(vel), point_b_acc(vel, acc), w_vel, w_acc)
+    point_b_force = force_on_point(point_b_vel(vel), point_b_acc(vel, acc))
     point_b_torque = cross(s_b(), point_b_force)
     q_b = [point_b_force, point_b_torque]
 
-    point_c_force = force_on_point(point_c_vel(vel), point_c_acc(vel, acc), w_vel, w_acc)
+    point_c_force = force_on_point(point_c_vel(vel), point_c_acc(vel, acc))
     point_c_torque = cross(s_c(), point_c_force)
     q_c = [point_c_force, point_c_torque]
 
-    # print(q_a, q_b, q_c)
     force = q_a[0] + q_b[0] + q_c[0]
     torque = q_a[1] + q_b[1] + q_c[1]
-    # print(force, torque)
-    # print()
-    # print()
-    # print(q_a[0], q_b[0], q_c[0])
-    # print(q_a[1], q_b[1], q_c[1])
     return np.append(force, torque)
 
 
@@ -148,7 +138,7 @@ if __name__ == '__main__':
     wind = np.zeros((3, it))
     water_vel = np.zeros((2, it+1))
 
-    engine_thrust = np.array([100, 0, 150])
+    engine_thrust = np.array([100, 100, 0])
     # engine_thrust = np.full((3, it), 0)
     # engine_thrust[0, :it // 2] = 500
     # engine_thrust[1, :it // 2] = 500
@@ -164,19 +154,12 @@ if __name__ == '__main__':
         current[:, i] = calculate_wrench(pos[:, i], vel[:, i], current_speed,
                                          current_dir, current_wrench_info, mode="current")
 
-        water_vel[:, i+1] = vector_to_xy_components(current_speed, current_dir)
-        water_acc = (water_vel[:, i+1] - water_vel[:, i])/0.01
-
-        # print(f"Vel: {water_vel[:, i+1]}")
-        # print(f"Acc: {water_acc}")
-
         # q_dist = wind[:, i]
         q_dist = current[:, i]
         # q_dist = wind[:, i] + current[:, i]
         # print(q_dist)
 
-        acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i],
-                                                      water_vel[:, i+1], water_acc)
+        acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i])
 
         # Acceleration
         acc[:, i + 1] = mass_inv @ acting_forces
