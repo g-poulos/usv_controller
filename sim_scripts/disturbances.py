@@ -97,14 +97,15 @@ def test_dist():
     current_velocity = IntegratedWhiteNoise(0, 0.514, 0.1, 0.001)
     current_direction = IntegratedWhiteNoise(0, 360, 100, 1)
     wind_velocity = IntegratedWhiteNoise(0, 10, 3, 0.3)
-    wind_direction = IntegratedWhiteNoise(200, 360, 200, 10)
+    wind_direction = IntegratedWhiteNoise(200, 360, 200, 7)
 
     wind_info = read_csv("wind_table.csv")
     current_info = read_csv("current_table.csv")
 
-    minutes = 2
-    plot_dist(minutes, wind_direction, wind_velocity, wind_info, mode="wind")
-    plot_dist(minutes, current_direction, current_velocity, current_info, mode="current")
+    minutes = 60
+    # plot_dist(minutes, wind_direction, wind_velocity, wind_info, mode="wind")
+    # plot_dist(minutes, current_direction, current_velocity, current_info, mode="current")
+    plot_mag_dir(minutes, wind_direction, wind_velocity)
 
 
 def plot_dist(minutes, direction_distribution, speed_distribution, wrench_info, mode):
@@ -134,6 +135,37 @@ def plot_dist(minutes, direction_distribution, speed_distribution, wrench_info, 
     fig.set_figwidth(16)
     fig.set_figheight(9)
     fig.suptitle(mode)
+    plt.show()
+
+
+def plot_mag_dir(minutes, direction_distribution, speed_distribution):
+    time = int(100 * 60) * minutes
+    time_stamps = []
+    speed = []
+    direction = []
+    for i in range(time):
+        time_stamps.append(i)
+        speed_val = speed_distribution.get_value()
+        direction_val = direction_distribution.get_value()
+        speed.append(speed_val)
+        direction.append(direction_val)
+
+    csfont = {'fontname': 'fonts/afm/ptmr8a.afm'}
+    hfont = {'fontname': 'Helvetica'}
+
+    time_stamps = np.array(time_stamps)
+    time_stamps = time_stamps * 10e-3
+    fig, ax = plt.subplots(2, 1, sharex=True)
+    ax[0].plot(time_stamps, speed, label='Wind Speed')
+    ax[0].set_ylabel('Magnitude (m/s)', fontsize=16)
+    ax[1].plot(time_stamps, direction, label='Wind Direction')
+    ax[1].set_ylabel('Direction (degrees)', fontsize=16)
+    ax[0].grid()
+    ax[1].grid()
+    ax[1].set_xlabel('Time (s)', fontsize=16)
+    fig.set_figwidth(16)
+    fig.set_figheight(9)
+    # fig.suptitle('Wind', fontsize=24)
     plt.show()
 
 
