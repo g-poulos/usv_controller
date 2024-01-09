@@ -62,20 +62,52 @@ if __name__ == '__main__':
     y_pos_diff = align_values(diff_data['Position-y'], odom_data_size)
     z_orient_diff = align_values(diff_data['Orientation-z'], odom_data_size)
 
-    fig, ax = plt.subplots(1, 3, sharex=True, sharey=False)
-    fig.set_figwidth(16)
-    fig.set_figheight(9)
-    ax[0].plot(odom_data['Position-x'], label='SIM')
-    ax[0].plot(x_pos_diff, label='Diff')
-    ax[0].legend()
+    x_vel_diff = align_values(diff_data['Velocity-x'], odom_data_size)
+    y_vel_diff = align_values(diff_data['Velocity-y'], odom_data_size)
+    z_vel_diff = align_values(diff_data['Velocity-z'], odom_data_size)
 
-    ax[1].plot(odom_data['Position-y'], label='SIM')
-    ax[1].plot(y_pos_diff, label='Diff')
-    ax[1].legend()
+    x_acc_diff = align_values(diff_data['Acceleration-x'], imu_data_size)
+    y_acc_diff = align_values(diff_data['Acceleration-y'], imu_data_size)
+    z_acc_diff = align_values(diff_data['Acceleration-z'], imu_data_size)
 
-    ax[2].plot(pd.DataFrame(odom_data['Orientation-z']).apply(radians_to_degrees),
-               label='SIM')
-    ax[2].plot(z_orient_diff, label='Diff')
-    ax[2].legend()
+    fig, ax = plt.subplots(3, 3, sharex=False, sharey=False)
+    fig.set_figwidth(32)
+    fig.set_figheight(18)
+
+    # Pose
+    ax[0, 0].plot(odom_data['Position-x'], label='SIM')
+    ax[0, 0].plot(x_pos_diff, label='Diff')
+
+    ax[0, 1].plot(odom_data['Position-y'], label='SIM')
+    ax[0, 1].plot(y_pos_diff, label='Diff')
+
+    ax[0, 2].plot(pd.DataFrame(odom_data['Orientation-z']).apply(radians_to_degrees),
+                  label='SIM')
+    ax[0, 2].plot(z_orient_diff, label='Diff')
+
+    # Twist
+    ax[1, 0].plot(odom_data['Velocity-x'], label='SIM')
+    ax[1, 0].plot(x_vel_diff, label='Diff')
+
+    ax[1, 1].plot(odom_data['Velocity-y'], label='SIM')
+    ax[1, 1].plot(y_vel_diff, label='Diff')
+
+    ax[1, 2].plot(pd.DataFrame(odom_data['Velocity-z']), label='SIM')
+    ax[1, 2].plot(z_vel_diff, label='Diff')
+
+    # Acceleration
+    ax[2, 0].plot(imu_data['Acceleration-x'], label='SIM')
+    ax[2, 0].plot(x_acc_diff, label='Diff')
+
+    ax[2, 1].plot(imu_data['Acceleration-y'], label='SIM')
+    ax[2, 1].plot(y_acc_diff, label='Diff')
+
+    # ax[2, 2].plot(pd.DataFrame(odom_data['Velocity-z']), label='SIM')
+    # ax[2, 2].plot(z_vel_diff, label='Diff')
+
+    for i in range(3):
+        for j in range(3):
+            ax[i, j].grid(True)
+            ax[i, j].legend()
 
     plt.show()
