@@ -1,6 +1,7 @@
 import math
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from disturbances import IntegratedWhiteNoise, read_csv, calculate_wrench
 from kinematics import *
@@ -117,13 +118,13 @@ def radians_to_degrees(radians):
 
 
 if __name__ == '__main__':
-    current_velocity = IntegratedWhiteNoise(0, 0.514, 0.1, 1)
+    current_velocity = IntegratedWhiteNoise(0, 0.5, 0.1, 0.5)
     current_direction = IntegratedWhiteNoise(90, 90, 90, 0)
-    current_wrench_info = read_csv("current_table.csv")
+    current_wrench_info = read_csv("disturbances_info/current_table.csv")
 
     wind_velocity = IntegratedWhiteNoise(0, 7.716, 2, 2)
     wind_direction = IntegratedWhiteNoise(0, 0, 0, 0)
-    wind_wrench_info = read_csv("wind_table.csv")
+    wind_wrench_info = read_csv("disturbances_info/wind_table.csv")
 
     mass_inv = np.linalg.inv(get_mass_matrix())
 
@@ -138,7 +139,7 @@ if __name__ == '__main__':
     wind = np.zeros((3, it))
     water_vel = np.zeros((2, it+1))
 
-    engine_thrust = np.array([100, 100, 0])
+    engine_thrust = np.array([100, 0, 10])
     # engine_thrust = np.full((3, it), 0)
     # engine_thrust[0, :it // 2] = 500
     # engine_thrust[1, :it // 2] = 500
@@ -172,11 +173,19 @@ if __name__ == '__main__':
         pos[:, i + 1] = pos[:, i] + step * vel_I
         pos[2, i] = radians_to_degrees(pos[2, i])
 
+    pos[2, it-1] = radians_to_degrees(pos[2, it-1])
+
         # print(f"\n ------- Iteration {i} ------- :")
         # print(f"Acting Forces: {acting_forces}")
         # print(f"Acceleration: {acc[:, i + 1]}")
         # print(f"Velocity: {vel[:, i + 1]}")
         # print(f"Position: {pos[:, i + 1]}")
         # print()
+
+    data = {'Position-x': pos[0, :], 'Position-y': pos[1, :], 'Orientation-z': pos[2, :],
+            'Velocity-x': vel[0, :], 'Velocity-y': vel[1, :], 'Velocity-z': vel[2, :],
+            'Acceleration-x': acc[0, :], 'Acceleration-y': acc[1, :], 'Acceleration-z': acc[2, :]}
+    df = pd.DataFrame(data)
+    df.to_csv('output.csv', index=False)
 
     plot_pos_vel_acc(pos, vel, acc)
