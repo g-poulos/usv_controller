@@ -4,7 +4,6 @@ from rclpy.serialization import serialize_message
 from geometry_msgs.msg import Vector3
 from nav_msgs.msg import Odometry
 from rosgraph_msgs.msg import Clock
-from sensor_msgs.msg import Imu
 import rosbag2_py
 import os
 
@@ -44,11 +43,17 @@ class SimpleBagRecorder(Node):
             serialization_format='cdr')
         self.writer.create_topic(odom_topic_info)
 
-        imu_topic_info = rosbag2_py._storage.TopicMetadata(
-            name='/model/vereniki/imu',
-            type='sensor_msgs/msg/Imu',
+        linear_acc_topic_info = rosbag2_py._storage.TopicMetadata(
+            name='/model/vereniki/acceleration/linear',
+            type='geometry_msgs/msg/Vector3',
             serialization_format='cdr')
-        self.writer.create_topic(imu_topic_info)
+        self.writer.create_topic(linear_acc_topic_info)
+
+        angular_acc_topic_info = rosbag2_py._storage.TopicMetadata(
+            name='/model/vereniki/acceleration/angular',
+            type='geometry_msgs/msg/Vector3',
+            serialization_format='cdr')
+        self.writer.create_topic(angular_acc_topic_info)
 
         self.wave_force_subscription = self.create_subscription(
             Vector3,
@@ -74,10 +79,16 @@ class SimpleBagRecorder(Node):
             self.clock_callback,
             10)
 
-        self.imu_subscription = self.create_subscription(
-            Imu,
-            "/model/vereniki/imu",
-            self.imu_callback,
+        self.linear_acc_subscription = self.create_subscription(
+            Vector3,
+            "/model/vereniki/acceleration/linear",
+            self.linear_acc_callback,
+            10)
+
+        self.angular_acc_subscription = self.create_subscription(
+            Vector3,
+            "/model/vereniki/acceleration/angular",
+            self.angular_acc_callback,
             10)
 
     def wave_force_callback(self, msg):
@@ -114,9 +125,15 @@ class SimpleBagRecorder(Node):
         self.get_logger().info(f"Sim time: {sim_time}, Rec time: {rec_time}",
                                throttle_duration_sec=1)
 
-    def imu_callback(self, msg):
+    def linear_acc_callback(self, msg):
         self.writer.write(
-            "/model/vereniki/imu",
+            "/model/vereniki/acceleration/linear",
+            serialize_message(msg),
+            self.get_clock().now().nanoseconds)
+
+    def angular_acc_callback(self, msg):
+        self.writer.write(
+            "/model/vereniki/acceleration/angular",
             serialize_message(msg),
             self.get_clock().now().nanoseconds)
 
