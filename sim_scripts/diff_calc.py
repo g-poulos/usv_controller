@@ -111,6 +111,43 @@ def plot_dist(current, wind):
     plt.show()
 
 
+def big_plots(pos, vel, acc):
+    pos_ax, pos_fig = plot3_1(pos)
+    vel_ax, vel_fig = plot3_1(vel)
+    acc_ax, acc_fig = plot3_1(acc)
+
+    pos_ax[0].set_ylabel('X-Axis Position [m]')
+    pos_ax[1].set_ylabel('Y-Axis Position [m]')
+    pos_ax[2].set_ylabel('Z-Axis Orientation [deg]')
+    pos_ax[2].set_xlabel('Time [s]')
+
+    vel_ax[0].set_ylabel('X-Axis \nLinear Velocity [m/s]')
+    vel_ax[1].set_ylabel('Y-Axis \nLinear Velocity [m/s]')
+    vel_ax[2].set_ylabel('Z-Axis \nAngular Velocity [rad/s]')
+    vel_ax[2].set_xlabel('Time [s]')
+
+    acc_ax[0].set_ylabel('X-Axis \nLinear Acceleration [m/s^2]')
+    acc_ax[1].set_ylabel('Y-Axis \nLinear Acceleration [m/s^2]')
+    acc_ax[2].set_ylabel('Z-Axis \nAngular Acceleration [rad/s^2]')
+    acc_ax[2].set_xlabel('Time [s]')
+    plt.show()
+
+
+def plot3_1(pos):
+    pos_fig, pos_ax = plt.subplots(3, 1, sharex=True, sharey=False)
+
+    pos_ax[0].plot(np.array(range(it))/1000, pos[0, :])
+    pos_ax[1].plot(np.array(range(it))/1000, pos[1, :])
+    pos_ax[2].plot(np.array(range(it))/1000, pos[2, :])
+
+    pos_fig.set_figwidth(16)
+    pos_fig.set_figheight(9)
+    for i in range(3):
+        pos_ax[i].grid(True)
+
+    return pos_ax, pos_fig
+
+
 def radians_to_degrees(radians):
     degrees = math.degrees(radians)
     degrees = (degrees + 180) % 360 - 180
@@ -119,18 +156,18 @@ def radians_to_degrees(radians):
 
 if __name__ == '__main__':
     current_velocity = IntegratedWhiteNoise(0, 0.5, 0.1, 0.5)
-    current_direction = IntegratedWhiteNoise(90, 90, 90, 0)
+    current_direction = IntegratedWhiteNoise(90, 120, 100, 5)
     current_wrench_info = read_csv("disturbances_info/current_table.csv")
 
     wind_velocity = IntegratedWhiteNoise(0, 7.716, 2, 2)
-    wind_direction = IntegratedWhiteNoise(0, 0, 0, 0)
+    wind_direction = IntegratedWhiteNoise(30, 60, 40, 5)
     wind_wrench_info = read_csv("disturbances_info/wind_table.csv")
 
     mass_inv = np.linalg.inv(get_mass_matrix())
 
-    step = 0.01
+    step = 0.001
     minutes = 1
-    it = int(100 * 60) * minutes
+    it = int(1000 * 60) * minutes
 
     acc = np.zeros((3, it), dtype=np.float64)
     vel = np.zeros((3, it), dtype=np.float64)
@@ -139,7 +176,7 @@ if __name__ == '__main__':
     wind = np.zeros((3, it))
     water_vel = np.zeros((2, it+1))
 
-    engine_thrust = np.array([100, 0, 10])
+    engine_thrust = np.array([100, 0, 0])
     # engine_thrust = np.full((3, it), 0)
     # engine_thrust[0, :it // 2] = 500
     # engine_thrust[1, :it // 2] = 500
@@ -156,11 +193,10 @@ if __name__ == '__main__':
                                          current_dir, current_wrench_info, mode="current")
 
         # q_dist = wind[:, i]
-        q_dist = current[:, i]
-        # q_dist = wind[:, i] + current[:, i]
-        # print(q_dist)
+        # q_dist = current[:, i]
+        q_dist = wind[:, i] + current[:, i]
 
-        acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i])
+        acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i]) + q_dist
 
         # Acceleration
         acc[:, i + 1] = mass_inv @ acting_forces
@@ -175,17 +211,20 @@ if __name__ == '__main__':
 
     pos[2, it-1] = radians_to_degrees(pos[2, it-1])
 
-        # print(f"\n ------- Iteration {i} ------- :")
-        # print(f"Acting Forces: {acting_forces}")
-        # print(f"Acceleration: {acc[:, i + 1]}")
-        # print(f"Velocity: {vel[:, i + 1]}")
-        # print(f"Position: {pos[:, i + 1]}")
-        # print()
+    # print(f"\n ------- Iteration {i} ------- :")
+    # print(f"Acting Forces: {acting_forces}")
+    # print(f"Acceleration: {acc[:, i + 1]}")
+    # print(f"Velocity: {vel[:, i + 1]}")
+    # print(f"Position: {pos[:, i + 1]}")
+    # print()
 
     data = {'Position-x': pos[0, :], 'Position-y': pos[1, :], 'Orientation-z': pos[2, :],
             'Velocity-x': vel[0, :], 'Velocity-y': vel[1, :], 'Velocity-z': vel[2, :],
             'Acceleration-x': acc[0, :], 'Acceleration-y': acc[1, :], 'Acceleration-z': acc[2, :]}
     df = pd.DataFrame(data)
     df.to_csv('output.csv', index=False)
+    print("Simulation output saved to: output.csv")
 
-    plot_pos_vel_acc(pos, vel, acc)
+    # plot_pos_vel_acc(pos, vel, acc)
+    big_plots(pos, vel, acc)
+    plot_dist(current, wind)
