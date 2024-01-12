@@ -9,7 +9,7 @@ class IntegratedWhiteNoise:
         self.min_val = min_val
         self.max_val = max_val
         self.stddev = stddev
-        self.dt = 0.01
+        self.dt = 0.001
         self.prev_val = init_val
 
     def get_value(self):

@@ -2,6 +2,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.ticker import MultipleLocator
 
 from disturbances import IntegratedWhiteNoise, read_csv, calculate_wrench
 from kinematics import *
@@ -97,24 +98,27 @@ def plot_pos_vel_acc(pos, vel, acc):
     plt.show()
 
 
-def plot_dist(current, wind):
-    fig, ax = plt.subplots(2, 3, sharex=True)
-    ax[0, 0].plot(range(it), current[0, :])
-    ax[0, 1].plot(range(it), current[1, :])
-    ax[0, 2].plot(range(it), current[2, :])
-    ax[1, 0].plot(range(it), wind[0, :])
-    ax[1, 1].plot(range(it), wind[1, :])
-    ax[1, 2].plot(range(it), wind[2, :])
+def plot_dist(magnitude, direction, title):
+    fig, ax = plt.subplots(2, 1, sharex=True)
+    ax[0].plot(np.array(range(it-1))/1000, magnitude)
+    ax[1].plot(np.array(range(it-1))/1000, direction)
+    ax[0].set_ylabel('Magnitude [m/s]')
+    ax[1].set_ylabel('Direction [deg]')
+    ax[1].set_xlabel('Time [deg]')
 
+    ax[0].grid(True)
+    ax[1].grid(True)
+
+    fig.suptitle(title, fontsize=20)
     fig.set_figwidth(16)
     fig.set_figheight(9)
     plt.show()
 
 
 def big_plots(pos, vel, acc):
-    pos_ax, pos_fig = plot3_1(pos)
-    vel_ax, vel_fig = plot3_1(vel)
-    acc_ax, acc_fig = plot3_1(acc)
+    pos_ax, pos_fig = plot3_1(pos, "Position & Orientation")
+    vel_ax, vel_fig = plot3_1(vel, "Linear & Angular Velocity")
+    acc_ax, acc_fig = plot3_1(acc, "Linear & Angular Acceleration")
 
     pos_ax[0].set_ylabel('X-Axis Position [m]')
     pos_ax[1].set_ylabel('Y-Axis Position [m]')
@@ -126,26 +130,27 @@ def big_plots(pos, vel, acc):
     vel_ax[2].set_ylabel('Z-Axis \nAngular Velocity [rad/s]')
     vel_ax[2].set_xlabel('Time [s]')
 
-    acc_ax[0].set_ylabel('X-Axis \nLinear Acceleration [m/s^2]')
-    acc_ax[1].set_ylabel('Y-Axis \nLinear Acceleration [m/s^2]')
-    acc_ax[2].set_ylabel('Z-Axis \nAngular Acceleration [rad/s^2]')
+    acc_ax[0].set_ylabel('X-Axis Linear\nAcceleration [m/s^2]')
+    acc_ax[1].set_ylabel('Y-Axis Linear\nAcceleration [m/s^2]')
+    acc_ax[2].set_ylabel('Z-Axis Angular\nAcceleration [rad/s^2]')
     acc_ax[2].set_xlabel('Time [s]')
     plt.show()
 
 
-def plot3_1(pos):
-    pos_fig, pos_ax = plt.subplots(3, 1, sharex=True, sharey=False)
+def plot3_1(values, title):
+    fig, ax = plt.subplots(3, 1, sharex=True, sharey=False)
 
-    pos_ax[0].plot(np.array(range(it))/1000, pos[0, :])
-    pos_ax[1].plot(np.array(range(it))/1000, pos[1, :])
-    pos_ax[2].plot(np.array(range(it))/1000, pos[2, :])
+    ax[0].plot(np.array(range(it)) / 1000, values[0, :])
+    ax[1].plot(np.array(range(it)) / 1000, values[1, :])
+    ax[2].plot(np.array(range(it)) / 1000, values[2, :])
 
-    pos_fig.set_figwidth(16)
-    pos_fig.set_figheight(9)
+    fig.set_figwidth(16)
+    fig.set_figheight(9)
+    fig.suptitle(title, fontsize=20)
     for i in range(3):
-        pos_ax[i].grid(True)
+        ax[i].grid(True)
 
-    return pos_ax, pos_fig
+    return ax, fig
 
 
 def radians_to_degrees(radians):
@@ -155,42 +160,52 @@ def radians_to_degrees(radians):
 
 
 if __name__ == '__main__':
-    current_velocity = IntegratedWhiteNoise(0, 0.5, 0.1, 0.5)
-    current_direction = IntegratedWhiteNoise(90, 120, 100, 5)
+    plt.rcParams["font.family"] = "Times New Roman"
+    plt.rcParams.update({'font.size': 15})
+    # Disturbances
+    current_velocity = IntegratedWhiteNoise(0, 0.5, 0.1, 0.3)
+    current_direction = IntegratedWhiteNoise(90, 120, 100, 20)
     current_wrench_info = read_csv("disturbances_info/current_table.csv")
 
-    wind_velocity = IntegratedWhiteNoise(0, 7.716, 2, 2)
-    wind_direction = IntegratedWhiteNoise(30, 60, 40, 5)
+    wind_velocity = IntegratedWhiteNoise(0, 7, 2, 2)
+    wind_direction = IntegratedWhiteNoise(30, 60, 40, 20)
     wind_wrench_info = read_csv("disturbances_info/wind_table.csv")
 
     mass_inv = np.linalg.inv(get_mass_matrix())
 
+    # Iterations
     step = 0.001
-    minutes = 1
+    minutes = 10
     it = int(1000 * 60) * minutes
 
+    # Data
     acc = np.zeros((3, it), dtype=np.float64)
     vel = np.zeros((3, it), dtype=np.float64)
     pos = np.zeros((3, it), dtype=np.float64)
     current = np.zeros((3, it))
     wind = np.zeros((3, it))
-    water_vel = np.zeros((2, it+1))
 
+    current_mag = np.zeros(it-1, dtype=np.float64)
+    current_dir = np.zeros(it-1, dtype=np.float64)
+    wind_mag = np.zeros(it-1, dtype=np.float64)
+    wind_dir = np.zeros(it-1, dtype=np.float64)
+
+    # Thrust input
     engine_thrust = np.array([100, 0, 0])
     # engine_thrust = np.full((3, it), 0)
     # engine_thrust[0, :it // 2] = 500
     # engine_thrust[1, :it // 2] = 500
 
     for i in range(it - 1):
-        wind_speed = wind_velocity.get_value()
-        wind_dir = wind_direction.get_value()
-        wind[:, i] = calculate_wrench(pos[:, i], vel[:, i], wind_speed,
-                                      wind_dir, wind_wrench_info, mode="wind")
+        wind_mag[i] = wind_velocity.get_value()
+        wind_dir[i] = wind_direction.get_value()
+        wind[:, i] = calculate_wrench(pos[:, i], vel[:, i], wind_mag[i],
+                                      wind_dir[i], wind_wrench_info, mode="wind")
 
-        current_speed = current_velocity.get_value()
-        current_dir = current_direction.get_value()
-        current[:, i] = calculate_wrench(pos[:, i], vel[:, i], current_speed,
-                                         current_dir, current_wrench_info, mode="current")
+        current_mag[i] = current_velocity.get_value()
+        current_dir[i] = current_direction.get_value()
+        current[:, i] = calculate_wrench(pos[:, i], vel[:, i], current_mag[i],
+                                         current_dir[i], current_wrench_info, mode="current")
 
         # q_dist = wind[:, i]
         # q_dist = current[:, i]
@@ -227,4 +242,5 @@ if __name__ == '__main__':
 
     # plot_pos_vel_acc(pos, vel, acc)
     big_plots(pos, vel, acc)
-    plot_dist(current, wind)
+    plot_dist(current_mag, current_dir, "Ocean Current Disturbance")
+    plot_dist(wind_mag, wind_dir, "Wind Disturbance")
