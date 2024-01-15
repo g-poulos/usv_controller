@@ -27,7 +27,6 @@ def get_thrust_7a(input_vec):
 
 def cartesian_to_polar(x, y):
     magnitude = np.sqrt(x**2 + y**2)
-    print(f"ATAN2 {x, y}")
     theta = -np.arctan2(y, x)
     return magnitude, theta
 
@@ -61,9 +60,13 @@ class VerenikiControllerNode(Node):
             Float64, "/model/vereniki/joint/engine_jointC/cmd_steer", 10)
 
         self.timer = self.create_timer(1, self.send_thrust_command)
+        self.declare_parameter('cmd_type', 'default')
 
     def send_thrust_command(self):
-        msgs = get_thrust_7a(np.array([100, 0, -10]))
+        cmd_type = self.get_parameter('cmd_type').get_parameter_value().string_value
+        self.get_logger().info(f"Command type: {cmd_type}")
+
+        msgs = get_thrust_7a(np.array([0, 0, 100]))
 
         thrustA_msg = Float64()
         directionA_msg = Float64()
@@ -83,18 +86,20 @@ class VerenikiControllerNode(Node):
         thrustC_msg.data = thrust_to_rotations(thrustC)
         directionC_msg.data = thetaC
 
-        self.thrustA_publisher.publish(thrustA_msg)
-        self.thrustB_publisher.publish(thrustB_msg)
-        self.thrustC_publisher.publish(thrustC_msg)
+        if cmd_type == "default" or cmd_type == "thrust_only":
+            self.thrustA_publisher.publish(thrustA_msg)
+            self.thrustB_publisher.publish(thrustB_msg)
+            self.thrustC_publisher.publish(thrustC_msg)
 
-        self.steerA_publisher.publish(directionA_msg)
-        self.steerB_publisher.publish(directionB_msg)
-        self.steerC_publisher.publish(directionC_msg)
+        if cmd_type == "default" or cmd_type == "direction_only":
+            self.steerA_publisher.publish(directionA_msg)
+            self.steerB_publisher.publish(directionB_msg)
+            self.steerC_publisher.publish(directionC_msg)
 
         self.get_logger().info("Thrust info (rad/s, radians): \n"
-                               f"{thrustA} {thetaA}\n"
-                               f"{thrustB} {thetaB}\n"
-                               f"{thrustC} {thetaC}")
+                               f"Engine A: {thrustA} {thetaA}\n"
+                               f"Engine B: {thrustB} {thetaB}\n"
+                               f"Engine C: {thrustC} {thetaC}")
 
 
 def main():
