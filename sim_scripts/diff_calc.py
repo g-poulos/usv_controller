@@ -1,8 +1,6 @@
 import math
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
-from matplotlib.ticker import MultipleLocator
 
 from disturbances import IntegratedWhiteNoise, read_csv, calculate_wrench
 from kinematics import *
@@ -104,7 +102,7 @@ def plot_dist(magnitude, direction, title):
     ax[1].plot(np.array(range(it-1))/1000, direction)
     ax[0].set_ylabel('Magnitude [m/s]')
     ax[1].set_ylabel('Direction [deg]')
-    ax[1].set_xlabel('Time [deg]')
+    ax[1].set_xlabel('Time [s]')
 
     ax[0].grid(True)
     ax[1].grid(True)
@@ -159,23 +157,31 @@ def radians_to_degrees(radians):
     return degrees
 
 
-if __name__ == '__main__':
-    plt.rcParams["font.family"] = "Times New Roman"
-    plt.rcParams.update({'font.size': 15})
+def save_to_file(acc, pos, vel, filename):
+    data = {'Position-x': pos[0, :], 'Position-y': pos[1, :], 'Orientation-z': pos[2, :],
+            'Velocity-x': vel[0, :], 'Velocity-y': vel[1, :], 'Velocity-z': vel[2, :],
+            'Acceleration-x': acc[0, :], 'Acceleration-y': acc[1, :],
+            'Acceleration-z': acc[2, :]}
+    df = pd.DataFrame(data)
+    df.to_csv(filename, index=False)
+    print(f"Simulation output saved to: {filename}")
+
+
+def run_simulation(thrust_input, dist=True, plot=True):
+    global it
+
     # Disturbances
     current_velocity = IntegratedWhiteNoise(0, 0.5, 0.1, 0.3)
     current_direction = IntegratedWhiteNoise(90, 120, 100, 20)
     current_wrench_info = read_csv("disturbances_info/current_table.csv")
-
     wind_velocity = IntegratedWhiteNoise(0, 7, 2, 2)
     wind_direction = IntegratedWhiteNoise(30, 60, 40, 20)
     wind_wrench_info = read_csv("disturbances_info/wind_table.csv")
-
     mass_inv = np.linalg.inv(get_mass_matrix())
 
     # Iterations
     step = 0.001
-    minutes = 10
+    minutes = 1
     it = int(1000 * 60) * minutes
 
     # Data
@@ -184,34 +190,31 @@ if __name__ == '__main__':
     pos = np.zeros((3, it), dtype=np.float64)
     current = np.zeros((3, it))
     wind = np.zeros((3, it))
-
-    current_mag = np.zeros(it-1, dtype=np.float64)
-    current_dir = np.zeros(it-1, dtype=np.float64)
-    wind_mag = np.zeros(it-1, dtype=np.float64)
-    wind_dir = np.zeros(it-1, dtype=np.float64)
-
-    # Thrust input
-    engine_thrust = np.array([100, 0, 0])
-    # engine_thrust = np.full((3, it), 0)
-    # engine_thrust[0, :it // 2] = 500
-    # engine_thrust[1, :it // 2] = 500
+    current_mag = np.zeros(it - 1, dtype=np.float64)
+    current_dir = np.zeros(it - 1, dtype=np.float64)
+    wind_mag = np.zeros(it - 1, dtype=np.float64)
+    wind_dir = np.zeros(it - 1, dtype=np.float64)
 
     for i in range(it - 1):
-        wind_mag[i] = wind_velocity.get_value()
-        wind_dir[i] = wind_direction.get_value()
-        wind[:, i] = calculate_wrench(pos[:, i], vel[:, i], wind_mag[i],
-                                      wind_dir[i], wind_wrench_info, mode="wind")
 
-        current_mag[i] = current_velocity.get_value()
-        current_dir[i] = current_direction.get_value()
-        current[:, i] = calculate_wrench(pos[:, i], vel[:, i], current_mag[i],
-                                         current_dir[i], current_wrench_info, mode="current")
+        if dist:
+            wind_mag[i] = wind_velocity.get_value()
+            wind_dir[i] = wind_direction.get_value()
+            wind[:, i] = calculate_wrench(pos[:, i], vel[:, i], wind_mag[i],
+                                          wind_dir[i], wind_wrench_info, mode="wind")
 
-        # q_dist = wind[:, i]
-        # q_dist = current[:, i]
-        q_dist = wind[:, i] + current[:, i]
+            current_mag[i] = current_velocity.get_value()
+            current_dir[i] = current_direction.get_value()
+            current[:, i] = calculate_wrench(pos[:, i], vel[:, i], current_mag[i],
+                                             current_dir[i], current_wrench_info,
+                                             mode="current")
 
-        acting_forces = engine_thrust + hydrodynamics(vel[:, i], acc[:, i]) + q_dist
+            # q_dist = wind[:, i]
+            # q_dist = current[:, i]
+            q_dist = wind[:, i] + current[:, i]
+            acting_forces = thrust_input + hydrodynamics(vel[:, i], acc[:, i]) + q_dist
+        else:
+            acting_forces = thrust_input + hydrodynamics(vel[:, i], acc[:, i])
 
         # Acceleration
         acc[:, i + 1] = mass_inv @ acting_forces
@@ -223,9 +226,9 @@ if __name__ == '__main__':
         vel_I = get_rotation_matrix(pos[2, i]) @ vel[:, i]
         pos[:, i + 1] = pos[:, i] + step * vel_I
         pos[2, i] = radians_to_degrees(pos[2, i])
+    pos[2, it - 1] = radians_to_degrees(pos[2, it - 1])
 
-    pos[2, it-1] = radians_to_degrees(pos[2, it-1])
-
+    # ---------- |DEBUG| ----------
     # print(f"\n ------- Iteration {i} ------- :")
     # print(f"Acting Forces: {acting_forces}")
     # print(f"Acceleration: {acc[:, i + 1]}")
@@ -233,14 +236,18 @@ if __name__ == '__main__':
     # print(f"Position: {pos[:, i + 1]}")
     # print()
 
-    data = {'Position-x': pos[0, :], 'Position-y': pos[1, :], 'Orientation-z': pos[2, :],
-            'Velocity-x': vel[0, :], 'Velocity-y': vel[1, :], 'Velocity-z': vel[2, :],
-            'Acceleration-x': acc[0, :], 'Acceleration-y': acc[1, :], 'Acceleration-z': acc[2, :]}
-    df = pd.DataFrame(data)
-    df.to_csv('output.csv', index=False)
-    print("Simulation output saved to: output.csv")
+    save_to_file(acc, pos, vel, "dynamic_model_out.csv")
 
-    # plot_pos_vel_acc(pos, vel, acc)
-    big_plots(pos, vel, acc)
-    plot_dist(current_mag, current_dir, "Ocean Current Disturbance")
-    plot_dist(wind_mag, wind_dir, "Wind Disturbance")
+    if plot:
+        # plot_pos_vel_acc(pos, vel, acc)
+        big_plots(pos, vel, acc)
+        if dist:
+            plot_dist(current_mag, current_dir, "Ocean Current Disturbance")
+            plot_dist(wind_mag, wind_dir, "Wind Disturbance")
+
+
+if __name__ == '__main__':
+    plt.rcParams["font.family"] = "Times New Roman"
+    plt.rcParams.update({'font.size': 15})
+
+    run_simulation(np.array([0, 0, 100]), dist=False, plot=True)
