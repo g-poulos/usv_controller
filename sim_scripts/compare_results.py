@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 def get_mcap_messages(file):
     pos = np.empty((3, 0))
     vel = np.empty((3, 0))
-    acc = np.empty((3, 0))
+    angular_acc_z = []
+    linear_acc_xy = []
 
     for msg in read_ros2_messages(file):
         if msg.channel.topic == "/model/vereniki/odometry":
@@ -24,15 +25,11 @@ def get_mcap_messages(file):
                                                   msg.ros_msg.twist.twist.linear.y,
                                                   msg.ros_msg.twist.twist.angular.z])))
 
-        temp_acc = np.zeros(3)
         if msg.channel.topic == "/model/vereniki/acceleration/linear":
-            temp_acc[0] = msg.ros_msg.x
-            temp_acc[1] = msg.ros_msg.y
+            linear_acc_xy.append([msg.ros_msg.x, msg.ros_msg.y])
 
         if msg.channel.topic == "/model/vereniki/acceleration/angular":
-            temp_acc[2] = msg.ros_msg.z
-
-        acc = np.column_stack((acc, temp_acc))
+            angular_acc_z.append(msg.ros_msg.z)
 
     odom_data = {'Position-x': pos[0, :],
                  'Position-y': pos[1, :],
@@ -41,10 +38,11 @@ def get_mcap_messages(file):
                  'Velocity-y': vel[1, :],
                  'Velocity-z': vel[2, :]}
 
-    imu_data = {'Acceleration-x': acc[0, :],
-                'Acceleration-y': acc[1, :],
-                'Acceleration-z': acc[2, :]}
-    return pd.DataFrame(odom_data), pd.DataFrame(imu_data)
+    acc_data = pd.DataFrame(linear_acc_xy)
+    acc_data['Acceleration-z'] = angular_acc_z
+    acc_data.rename(columns={0: "Acceleration-x", 1: "Acceleration-y"}, inplace=True)
+
+    return pd.DataFrame(odom_data), acc_data
 
 
 def align_values(data, size):
@@ -85,9 +83,9 @@ def plot3_1(diff_values, sim_values, title):
 
 if __name__ == '__main__':
     # Read simulation data
-    odom_data, imu_data = get_mcap_messages("../bagfiles/record9/record9_0.mcap")
+    odom_data, acc_data = get_mcap_messages("../bagfiles/record9/record9_0.mcap")
     odom_data_size = odom_data.shape[0]
-    imu_data_size = imu_data.shape[0]
+    acc_data_size = acc_data.shape[0]
 
     # Read dynamic model data
     diff_data = pd.read_csv('output.csv')
@@ -101,9 +99,9 @@ if __name__ == '__main__':
     y_vel_diff = align_values(diff_data['Velocity-y'], odom_data_size)
     z_vel_diff = align_values(diff_data['Velocity-z'], odom_data_size)
 
-    x_acc_diff = align_values(diff_data['Acceleration-x'], imu_data_size)
-    y_acc_diff = align_values(diff_data['Acceleration-y'], imu_data_size)
-    z_acc_diff = align_values(diff_data['Acceleration-z'], imu_data_size)
+    x_acc_diff = align_values(diff_data['Acceleration-x'], acc_data_size)
+    y_acc_diff = align_values(diff_data['Acceleration-y'], acc_data_size)
+    z_acc_diff = align_values(diff_data['Acceleration-z'], acc_data_size)
 
     # Create separate dataframes
     pose_diff = pd.DataFrame({'Position-x': x_pos_diff,
@@ -119,15 +117,14 @@ if __name__ == '__main__':
                              'Acceleration-z': z_acc_diff})
 
     odom_data = pd.DataFrame(odom_data)
-    # odom_data['Orientation-z'] = odom_data['Orientation-z'].apply(radians_to_degrees)
-    imu_data = pd.DataFrame(imu_data)
+    acc_data = pd.DataFrame(acc_data)
 
     # Plot results
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams.update({'font.size': 15})
     pose_fig, pose_ax = plot3_1(pose_diff, odom_data, title="Position and Orientation")
     twist_fig, twist_ax = plot3_1(twist_diff, odom_data.iloc[:, 3:], title="Linear and Angular Velocity")
-    acc_fig, acc_ax = plot3_1(acc_diff, imu_data, title="Linear and Angular Acceleration")
+    acc_fig, acc_ax = plot3_1(acc_diff, acc_data, title="Linear and Angular Acceleration")
 
     pose_ax[0].set_ylabel('X-Axis Position [m]')
     pose_ax[1].set_ylabel('Y-Axis Position [m]')
