@@ -156,4 +156,4 @@ def compare_results(bagfile_name):
 
 
 if __name__ == '__main__':
-    compare_results('../bagfiles/record2-0_0_100/record3_0.mcap')
+    compare_results('../bagfiles/record3-100_0_40/record3_0.mcap')
