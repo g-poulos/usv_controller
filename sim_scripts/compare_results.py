@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from mcap_ros2.reader import read_ros2_messages
 import matplotlib.pyplot as plt
+from diff_calc import run_simulation
 
 
 def get_mcap_messages(file):
@@ -63,13 +64,14 @@ def quaternion_to_yaw(quaternion):
 
 def plot3_1(diff_values, sim_values, title):
     fig, ax = plt.subplots(3, 1, sharex=True, sharey=False)
+    time = np.linspace(0, 60, diff_values.shape[0])
 
-    ax[0].plot(diff_values.iloc[:, 0], label="Dynamic Model", color="blue")
-    ax[1].plot(diff_values.iloc[:, 1], label="Dynamic Model", color="blue")
-    ax[2].plot(diff_values.iloc[:, 2], label="Dynamic Model", color="blue")
-    ax[0].plot(sim_values.iloc[:, 0], label="Gazebo", color="orange")
-    ax[1].plot(sim_values.iloc[:, 1], label="Gazebo", color="orange")
-    ax[2].plot(sim_values.iloc[:, 2], label="Gazebo", color="orange")
+    ax[0].plot(time, diff_values.iloc[:, 0], label="Dynamic Model", color="royalblue")
+    ax[1].plot(time, diff_values.iloc[:, 1], label="Dynamic Model", color="royalblue")
+    ax[2].plot(time, diff_values.iloc[:, 2], label="Dynamic Model", color="royalblue")
+    ax[0].plot(time, sim_values.iloc[:, 0], label="Gazebo", color="darkorange")
+    ax[1].plot(time, sim_values.iloc[:, 1], label="Gazebo", color="darkorange")
+    ax[2].plot(time, sim_values.iloc[:, 2], label="Gazebo", color="darkorange")
 
     fig.set_figwidth(16)
     fig.set_figheight(9)
@@ -81,14 +83,24 @@ def plot3_1(diff_values, sim_values, title):
     return fig, ax
 
 
-if __name__ == '__main__':
+def get_input_from_bagfile(bagfile_name):
+    file_name = bagfile_name.split("/")[-2].split("-")[1]
+    input_vector = file_name.split("_")
+    input_vector = np.array(list(map(float, input_vector)))
+    return input_vector
+
+
+def compare_results(bagfile_name):
     # Read simulation data
-    odom_data, acc_data = get_mcap_messages("../bagfiles/record9/record9_0.mcap")
+    odom_data, acc_data = get_mcap_messages(bagfile_name)
     odom_data_size = odom_data.shape[0]
     acc_data_size = acc_data.shape[0]
 
     # Read dynamic model data
-    diff_data = pd.read_csv('output.csv')
+    input_vector = get_input_from_bagfile(bagfile_name)
+    print("Running dynamic model sim with input: ", input_vector)
+    run_simulation(input_vector, dist=False, plot=False)
+    diff_data = pd.read_csv('dynamic_model_out.csv')
 
     # Align Gazebo simulation and Dynamic Model values
     x_pos_diff = align_values(diff_data['Position-x'], odom_data_size)
@@ -141,3 +153,7 @@ if __name__ == '__main__':
     acc_ax[2].set_ylabel('Z-Axis Angular\nAcceleration [rad/s^2]')
     acc_ax[2].set_xlabel('Time [s]')
     plt.show()
+
+
+if __name__ == '__main__':
+    compare_results('../bagfiles/record2-0_0_100/record3_0.mcap')
