@@ -109,6 +109,18 @@ class SimpleBagRecorder(Node):
             serialize_message(msg),
             self.get_clock().now().nanoseconds)
 
+    def linear_acc_callback(self, msg):
+        self.writer.write(
+            "/model/vereniki/acceleration/linear",
+            serialize_message(msg),
+            self.get_clock().now().nanoseconds)
+
+    def angular_acc_callback(self, msg):
+        self.writer.write(
+            "/model/vereniki/acceleration/angular",
+            serialize_message(msg),
+            self.get_clock().now().nanoseconds)
+
     def clock_callback(self, msg):
         global start_time, first_msg
         sim_time = msg.clock.sec
@@ -124,18 +136,6 @@ class SimpleBagRecorder(Node):
 
         self.get_logger().info(f"Sim time: {sim_time}, Rec time: {rec_time}",
                                throttle_duration_sec=1)
-
-    def linear_acc_callback(self, msg):
-        self.writer.write(
-            "/model/vereniki/acceleration/linear",
-            serialize_message(msg),
-            self.get_clock().now().nanoseconds)
-
-    def angular_acc_callback(self, msg):
-        self.writer.write(
-            "/model/vereniki/acceleration/angular",
-            serialize_message(msg),
-            self.get_clock().now().nanoseconds)
 
 
 def count_records(path):

@@ -27,7 +27,7 @@ def get_thrust_7a(input_vec):
 
 def cartesian_to_polar(x, y):
     magnitude = np.sqrt(x**2 + y**2)
-    theta = -np.arctan2(y, x)
+    theta = np.arctan2(x, y) - np.pi/2
     return magnitude, theta
 
 
@@ -66,7 +66,7 @@ class VerenikiControllerNode(Node):
         cmd_type = self.get_parameter('cmd_type').get_parameter_value().string_value
         self.get_logger().info(f"Command type: {cmd_type}")
 
-        msgs = get_thrust_7a(np.array([0, 0, 100]))
+        msgs = get_thrust_7a(np.array([100, 0, 40]))
 
         thrustA_msg = Float64()
         directionA_msg = Float64()
