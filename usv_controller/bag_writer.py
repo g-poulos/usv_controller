@@ -206,6 +206,7 @@ class SimpleBagRecorder(Node):
 
         if first_msg:
             start_time = sim_time
+            rec_time = 0
             first_msg = False
 
         if rec_time > 60 and sbr:
