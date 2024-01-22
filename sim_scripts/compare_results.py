@@ -3,6 +3,7 @@ import numpy as np
 from mcap_ros2.reader import read_ros2_messages
 import matplotlib.pyplot as plt
 from diff_calc import run_simulation
+import sys
 
 
 def get_mcap_messages(file):
@@ -156,4 +157,7 @@ def compare_results(bagfile_name):
 
 
 if __name__ == '__main__':
-    compare_results('../bagfiles/record3-100_0_40/record3_0.mcap')
+    if len(sys.argv) != 2:
+        print('Usage: compare_results.py -record.mcap-')
+    else:
+        compare_results(sys.argv[1])
