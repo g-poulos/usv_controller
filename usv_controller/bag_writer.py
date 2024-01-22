@@ -1,6 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.serialization import serialize_message
+from std_msgs.msg import Float32
 from geometry_msgs.msg import Vector3
 from nav_msgs.msg import Odometry
 from rosgraph_msgs.msg import Clock
@@ -24,6 +25,8 @@ class SimpleBagRecorder(Node):
             storage_id='mcap')
         converter_options = rosbag2_py._storage.ConverterOptions('cdr', 'cdr')
         self.writer.open(storage_options, converter_options)
+
+        # ------------------------| TOPIC INFO |------------------------
 
         wave_force_topic_info = rosbag2_py._storage.TopicMetadata(
             name='/wave/force',
@@ -54,6 +57,32 @@ class SimpleBagRecorder(Node):
             type='geometry_msgs/msg/Vector3',
             serialization_format='cdr')
         self.writer.create_topic(angular_acc_topic_info)
+
+        current_speed_topic_info = rosbag2_py._storage.TopicMetadata(
+            name='/waterCurrent/speed',
+            type='std_msgs/msg/Float32',
+            serialization_format='cdr')
+        self.writer.create_topic(current_speed_topic_info)
+
+        current_direction_topic_info = rosbag2_py._storage.TopicMetadata(
+            name='/waterCurrent/direction',
+            type='std_msgs/msg/Float32',
+            serialization_format='cdr')
+        self.writer.create_topic(current_direction_topic_info)
+
+        wind_speed_topic_info = rosbag2_py._storage.TopicMetadata(
+            name='/wind/speed',
+            type='std_msgs/msg/Float32',
+            serialization_format='cdr')
+        self.writer.create_topic(wind_speed_topic_info)
+
+        wind_direction_topic_info = rosbag2_py._storage.TopicMetadata(
+            name='/wind/direction',
+            type='std_msgs/msg/Float32',
+            serialization_format='cdr')
+        self.writer.create_topic(wind_direction_topic_info)
+
+        # ------------------------| SUBSCRIPTIONS |------------------------
 
         self.wave_force_subscription = self.create_subscription(
             Vector3,
@@ -91,6 +120,31 @@ class SimpleBagRecorder(Node):
             self.angular_acc_callback,
             10)
 
+        self.current_speed_subscription = self.create_subscription(
+            Float32,
+            "/waterCurrent/speed",
+            self.current_speed_callback,
+            10)
+
+        self.current_direction_subscription = self.create_subscription(
+            Float32,
+            "/waterCurrent/direction",
+            self.current_direction_callback,
+            10)
+
+        self.wind_speed_subscription = self.create_subscription(
+            Float32,
+            "/wind/speed",
+            self.wind_speed_callback,
+            10)
+
+        self.wind_direction_subscription = self.create_subscription(
+            Float32,
+            "/wind/direction",
+            self.wind_direction_callback,
+            10)
+
+
     def wave_force_callback(self, msg):
         self.writer.write(
             '/wave/force',
@@ -118,6 +172,30 @@ class SimpleBagRecorder(Node):
     def angular_acc_callback(self, msg):
         self.writer.write(
             "/model/vereniki/acceleration/angular",
+            serialize_message(msg),
+            self.get_clock().now().nanoseconds)
+
+    def current_speed_callback(self, msg):
+        self.writer.write(
+            "/waterCurrent/speed",
+            serialize_message(msg),
+            self.get_clock().now().nanoseconds)
+
+    def current_direction_callback(self, msg):
+        self.writer.write(
+            "/waterCurrent/direction",
+            serialize_message(msg),
+            self.get_clock().now().nanoseconds)
+
+    def wind_speed_callback(self, msg):
+        self.writer.write(
+            "/wind/speed",
+            serialize_message(msg),
+            self.get_clock().now().nanoseconds)
+
+    def wind_direction_callback(self, msg):
+        self.writer.write(
+            "/wind/direction",
             serialize_message(msg),
             self.get_clock().now().nanoseconds)
 
