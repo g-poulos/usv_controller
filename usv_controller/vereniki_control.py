@@ -61,12 +61,18 @@ class VerenikiControllerNode(Node):
 
         self.timer = self.create_timer(1, self.send_thrust_command)
         self.declare_parameter('cmd_type', 'default')
+        self.declare_parameter('thrust', '100, 0, 0')
 
     def send_thrust_command(self):
         cmd_type = self.get_parameter('cmd_type').get_parameter_value().string_value
+        input_thrust = self.get_parameter('thrust').get_parameter_value().string_value
+        input_thrust_lst = input_thrust.split(",")
+        input_vector = np.array(list(map(float, input_thrust_lst)))
+
+        self.get_logger().info(f"Thrust: {input_vector}")
         self.get_logger().info(f"Command type: {cmd_type}")
 
-        msgs = get_thrust_7a(np.array([100, 0, 40]))
+        msgs = get_thrust_7a(input_vector)
 
         thrustA_msg = Float64()
         directionA_msg = Float64()
@@ -103,8 +109,12 @@ class VerenikiControllerNode(Node):
 
 
 def main():
-    rclpy.init()
+    # ros2 run usv_controller vereniki_controller --ros-args -p thrust:="100, 0, 0"
+    # ros2 run usv_controller vereniki_controller --ros-args -p cmd_type := direction_only
+    # ros2 run usv_controller vereniki_controller --ros-args -p cmd_type := direction_only
+    #                                                        -p thrust:="100, 0, 0"
 
+    rclpy.init()
     executor = rclpy.executors.SingleThreadedExecutor()
     lc_node = VerenikiControllerNode()
     executor.add_node(lc_node)
