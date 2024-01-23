@@ -104,10 +104,10 @@ def compare_results(bagfile_name, read_dist=False):
     if read_dist:
         dist = True
         filename = bagfile_name
+        print("Reading disturbance data from bagfile")
     else:
         dist = False
         filename = None
-        print("Reading disturbance data from bagfile")
 
     run_simulation(input_vector,
                    dist=dist,

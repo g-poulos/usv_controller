@@ -84,10 +84,10 @@ def calculate_wrench(model_pose, model_vel, force_speed, force_direction, wrench
     offset = wrench_info.offset[index]
 
     # Force
-    force = 0.5 * fluid_dens * Cd * relative_vel * np.linalg.norm(relative_vel) * force_surface
+    force = 0.5 * fluid_dens * C_dist * relative_vel * np.linalg.norm(relative_vel) * force_surface
 
     # Torque
-    torque_force = 0.5 * fluid_dens * Cd * relative_vel * np.linalg.norm(relative_vel) * torque_surface
+    torque_force = 0.5 * fluid_dens * C_dist * relative_vel * np.linalg.norm(relative_vel) * torque_surface
     torque = np.linalg.norm(torque_force) * offset
 
     return np.array([force[0], force[1], torque])
