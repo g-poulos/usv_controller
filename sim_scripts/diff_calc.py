@@ -1,6 +1,7 @@
 import math
 import matplotlib.pyplot as plt
 import pandas as pd
+from mcap_ros2.reader import read_ros2_messages
 
 from disturbances import IntegratedWhiteNoise, read_csv, calculate_wrench
 from kinematics import *
@@ -62,15 +63,15 @@ def get_mass_matrix():
 
 def plot_pos_vel_acc(pos, vel, acc):
     fig, ax = plt.subplots(3, 3, sharex=True, sharey=False)
-    ax[0, 0].plot(range(it), pos[0, :])
-    ax[0, 1].plot(range(it), pos[1, :])
-    ax[0, 2].plot(range(it), pos[2, :])
-    ax[1, 0].plot(range(it), vel[0, :])
-    ax[1, 1].plot(range(it), vel[1, :])
-    ax[1, 2].plot(range(it), vel[2, :])
-    ax[2, 0].plot(range(it), acc[0, :])
-    ax[2, 1].plot(range(it), acc[1, :])
-    ax[2, 2].plot(range(it), acc[2, :])
+    ax[0, 0].plot(len(pos[0, :]), pos[0, :])
+    ax[0, 1].plot(len(pos[1, :]), pos[1, :])
+    ax[0, 2].plot(len(pos[2, :]), pos[2, :])
+    ax[1, 0].plot(len(vel[0, :]), vel[0, :])
+    ax[1, 1].plot(len(vel[1, :]), vel[1, :])
+    ax[1, 2].plot(len(vel[2, :]), vel[2, :])
+    ax[2, 0].plot(len(acc[0, :]), acc[0, :])
+    ax[2, 1].plot(len(acc[1, :]), acc[1, :])
+    ax[2, 2].plot(len(acc[2, :]), acc[2, :])
     ax[0, 0].set_title('X-Axis Position')
     ax[0, 1].set_title('Y-Axis Position')
     ax[0, 2].set_title('Z-Axis Orientation ')
@@ -98,8 +99,10 @@ def plot_pos_vel_acc(pos, vel, acc):
 
 def plot_dist(magnitude, direction, title):
     fig, ax = plt.subplots(2, 1, sharex=True)
-    ax[0].plot(np.array(range(it-1))/1000, magnitude)
-    ax[1].plot(np.array(range(it-1))/1000, direction)
+    iterations = len(magnitude)
+
+    ax[0].plot(np.array(range(iterations))/1000, magnitude)
+    ax[1].plot(np.array(range(iterations))/1000, direction)
     ax[0].set_ylabel('Magnitude [m/s]')
     ax[1].set_ylabel('Direction [deg]')
     ax[1].set_xlabel('Time [s]')
@@ -137,10 +140,11 @@ def big_plots(pos, vel, acc):
 
 def plot3_1(values, title):
     fig, ax = plt.subplots(3, 1, sharex=True, sharey=False)
+    iterations = len(values[0, :])
 
-    ax[0].plot(np.array(range(it)) / 1000, values[0, :])
-    ax[1].plot(np.array(range(it)) / 1000, values[1, :])
-    ax[2].plot(np.array(range(it)) / 1000, values[2, :])
+    ax[0].plot(np.array(range(iterations)) / 1000, values[0, :])
+    ax[1].plot(np.array(range(iterations)) / 1000, values[1, :])
+    ax[2].plot(np.array(range(iterations)) / 1000, values[2, :])
 
     fig.set_figwidth(16)
     fig.set_figheight(9)
@@ -167,15 +171,44 @@ def save_to_file(acc, pos, vel, filename):
     print(f"Simulation output saved to: {filename}")
 
 
-def run_simulation(thrust_input, dist=True, plot=True):
-    global it
+def align_values(data, size):
+    selected_indices = np.linspace(0, len(data) - 1, size, dtype=int)
+    return data.iloc[selected_indices].reset_index(drop=True)
 
+
+def read_disturbances_from_file(filename, iterations):
+    gz_current_mag = []
+    gz_current_dir = []
+    gz_wind_mag = []
+    gz_wind_dir = []
+    for msg in read_ros2_messages(filename):
+        if msg.channel.topic == "/waterCurrent/speed":
+            gz_current_mag.append(msg.ros_msg.data)
+        if msg.channel.topic == "/waterCurrent/direction":
+            gz_current_dir.append(msg.ros_msg.data)
+        if msg.channel.topic == "/wind/speed":
+            gz_wind_mag.append(msg.ros_msg.data)
+        if msg.channel.topic == "/wind/direction":
+            gz_wind_dir.append(msg.ros_msg.data)
+
+    gz_current_mag = align_values(pd.DataFrame(gz_current_mag), iterations)
+    gz_current_dir = align_values(pd.DataFrame(gz_current_dir), iterations)
+    gz_wind_mag = align_values(pd.DataFrame(gz_wind_mag), iterations)
+    gz_wind_dir = align_values(pd.DataFrame(gz_wind_dir), iterations)
+
+    return (gz_current_mag[0].to_numpy(),
+            gz_current_dir[0].to_numpy(),
+            gz_wind_mag[0].to_numpy(),
+            gz_wind_dir[0].to_numpy())
+
+
+def run_simulation(thrust_input, dist=True, filename=None, plot=True):
     # Disturbances
-    current_velocity = IntegratedWhiteNoise(0, 0.5, 0.1, 0.3)
-    current_direction = IntegratedWhiteNoise(90, 120, 100, 20)
+    current_velocity = IntegratedWhiteNoise(0, 0.3, 0.1, 0.05)
+    current_direction = IntegratedWhiteNoise(155, 205, 180, 20)
     current_wrench_info = read_csv("disturbances_info/current_table.csv")
     wind_velocity = IntegratedWhiteNoise(0, 7, 2, 2)
-    wind_direction = IntegratedWhiteNoise(30, 60, 40, 20)
+    wind_direction = IntegratedWhiteNoise(245, 295, 270, 20)
     wind_wrench_info = read_csv("disturbances_info/wind_table.csv")
     mass_inv = np.linalg.inv(get_mass_matrix())
 
@@ -195,16 +228,20 @@ def run_simulation(thrust_input, dist=True, plot=True):
     wind_mag = np.zeros(it - 1, dtype=np.float64)
     wind_dir = np.zeros(it - 1, dtype=np.float64)
 
+    if filename:
+        current_mag, current_dir, wind_mag, wind_dir = read_disturbances_from_file(filename, it-1)
+
     for i in range(it - 1):
 
         if dist:
-            wind_mag[i] = wind_velocity.get_value()
-            wind_dir[i] = wind_direction.get_value()
+            if not filename:
+                wind_mag[i] = wind_velocity.get_value()
+                wind_dir[i] = wind_direction.get_value()
+                current_mag[i] = current_velocity.get_value()
+                current_dir[i] = current_direction.get_value()
+
             wind[:, i] = calculate_wrench(pos[:, i], vel[:, i], wind_mag[i],
                                           wind_dir[i], wind_wrench_info, mode="wind")
-
-            current_mag[i] = current_velocity.get_value()
-            current_dir[i] = current_direction.get_value()
             current[:, i] = calculate_wrench(pos[:, i], vel[:, i], current_mag[i],
                                              current_dir[i], current_wrench_info,
                                              mode="current")
@@ -250,4 +287,7 @@ if __name__ == '__main__':
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams.update({'font.size': 15})
 
-    run_simulation(np.array([0, 0, 100]), dist=False, plot=True)
+    run_simulation(np.array([100, 0, 0]),
+                   dist=True,
+                   filename=None,
+                   plot=True)
