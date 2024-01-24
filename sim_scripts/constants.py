@@ -30,8 +30,8 @@ Al_lower = 0.4196491616786311   # Lateral projected area
 water_density = 1025    # Water density
 air_density = 1.222     # Air density
 Ca = 0.8                # Added mass coefficient
-Cd = 1.0                # Drag coefficient
-C_dist = 1.2            # Disturbance force coefficient
+Cd = 0.8                # Drag coefficient
+C_dist = 0.8            # Disturbance force coefficient
 
 # Eq. 4
 h = H_uc - (1/(R_uc**2)) * (m / (3 * np.pi * water_density) - (R_lc ** 2) * H_lc)

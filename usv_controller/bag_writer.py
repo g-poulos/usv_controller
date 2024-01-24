@@ -144,7 +144,6 @@ class SimpleBagRecorder(Node):
             self.wind_direction_callback,
             10)
 
-
     def wave_force_callback(self, msg):
         self.writer.write(
             '/wave/force',
