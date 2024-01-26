@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 from diff_calc import run_simulation
 import sys
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-from matplotlib import transforms
 
 
 def get_mcap_messages(file):
@@ -62,7 +61,6 @@ def quaternion_to_yaw(quaternion):
 
 def set_min_plot_range(ax, min_value):
     if abs(ax.get_ylim()[0]) < min_value and abs(ax.get_ylim()[1]) < min_value:
-        print(ax.get_ylim())
         ax.set_ylim(ymin=-min_value, ymax=min_value)
 
 
@@ -102,20 +100,21 @@ def plot3_1(diff_values, sim_values, title):
 
 
 def plot_trajectories(sim_data, diff_data):
+    plt.rcParams["font.family"] = "Times New Roman"
+    plt.rcParams.update({'font.size': 15})
     fig, ax = plt.subplots(figsize=(10, 10))
 
-    base = plt.gca().transData
-    rot = transforms.Affine2D().rotate_deg(90)
-    plt.plot(sim_data.iloc[:, 0], sim_data.iloc[:, 1],
-             transform=rot + base,
+    plt.plot(sim_data.iloc[:, 1], sim_data.iloc[:, 0],
              label="Gazebo Simulation",
              color="darkorange")
-    plt.plot(diff_data.iloc[:, 0], diff_data.iloc[:, 1],
-             transform=rot + base,
-             label="Python Simulation",
+    plt.plot(diff_data.iloc[:, 1], diff_data.iloc[:, 0],
+             label="Dynamic Model",
              color="royalblue")
-    plt.xlim([-max(diff_data.iloc[:, 1]) - 10, max(diff_data.iloc[:, 1]) + 10])
-    plt.ylim([-max(diff_data.iloc[:, 0]) - 10, max(diff_data.iloc[:, 0]) + 10])
+    max_val = max(max(diff_data.iloc[:, 1]), max(diff_data.iloc[:, 0]))
+
+    plt.xlim([max_val + 10, -max_val - 10])
+    plt.ylim([-max_val - 10, max_val + 10])
+
     plt.grid()
     plt.legend(loc="best")
 
@@ -124,15 +123,16 @@ def plot_trajectories(sim_data, diff_data):
     fig.suptitle("Platform Trajectory", fontsize=20)
 
     im = plt.imread("/home/g-poulos/Downloads/vereniki.png")
-    imagebox = OffsetImage(im, zoom=0.1)
+    scale = (abs(ax.get_xlim()[0]) + abs(ax.get_xlim()[1])) / 5
+    imagebox = OffsetImage(im, zoom=1 / scale)
     imagebox.image.axes = ax
     ab = AnnotationBbox(imagebox, (0.5, 0.5), xycoords='axes fraction',
                         bboxprops={'lw': 0, 'alpha': 0})
     ax.add_artist(ab)
 
     ax.annotate("Start position",
-                xy=(1, 1), xycoords='data',
-                xytext=(6, 4), textcoords='data',
+                xy=(-1, -1), xycoords='data',
+                xytext=(-6, -4), textcoords='data',
                 size=15, va="center", ha="center",
                 arrowprops=dict(arrowstyle="-|>"))
 
