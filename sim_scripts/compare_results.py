@@ -4,6 +4,8 @@ from mcap_ros2.reader import read_ros2_messages
 import matplotlib.pyplot as plt
 from diff_calc import run_simulation
 import sys
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+from matplotlib import transforms
 
 
 def get_mcap_messages(file):
@@ -53,35 +55,86 @@ def align_values(data, size):
 
 
 def quaternion_to_yaw(quaternion):
-    # Extract the relevant quaternion components
     q0, q1, q2, q3 = quaternion
-
-    # Calculate yaw (rotation around the vertical axis)
     yaw = np.arctan2(2 * (q0 * q3 + q1 * q2), 1 - 2 * (q2**2 + q3**2))
-
-    # Convert yaw from radians to degrees
     return np.degrees(yaw)
 
 
+def set_min_plot_range(ax, min_value):
+    if abs(ax.get_ylim()[0]) < min_value and abs(ax.get_ylim()[1]) < min_value:
+        print(ax.get_ylim())
+        ax.set_ylim(ymin=-min_value, ymax=min_value)
+
+
 def plot3_1(diff_values, sim_values, title):
-    fig, ax = plt.subplots(3, 1, sharex=True, sharey=False)
+    fig = plt.figure()
+    ax0 = plt.subplot(311)
+    ax1 = plt.subplot(312, sharex=ax0, sharey=ax0)
+    ax2 = plt.subplot(313, sharex=ax0)
     time = np.linspace(0, 60, diff_values.shape[0])
 
-    ax[0].plot(time, diff_values.iloc[:, 0], label="Dynamic Model", color="royalblue")
-    ax[1].plot(time, diff_values.iloc[:, 1], label="Dynamic Model", color="royalblue")
-    ax[2].plot(time, diff_values.iloc[:, 2], label="Dynamic Model", color="royalblue")
-    ax[0].plot(time, sim_values.iloc[:, 0], label="Gazebo", color="darkorange")
-    ax[1].plot(time, sim_values.iloc[:, 1], label="Gazebo", color="darkorange")
-    ax[2].plot(time, sim_values.iloc[:, 2], label="Gazebo", color="darkorange")
+    ax0.plot(time, diff_values.iloc[:, 0], label="Dynamic Model", color="royalblue")
+    ax1.plot(time, diff_values.iloc[:, 1], label="Dynamic Model", color="royalblue")
+    ax2.plot(time, diff_values.iloc[:, 2], label="Dynamic Model", color="royalblue")
+    ax0.plot(time, sim_values.iloc[:, 0], label="Gazebo", color="darkorange")
+    ax1.plot(time, sim_values.iloc[:, 1], label="Gazebo", color="darkorange")
+    ax2.plot(time, sim_values.iloc[:, 2], label="Gazebo", color="darkorange")
+
+    if "Position" in title:
+        set_min_plot_range(ax0, 5)
+    if "Velocity" in title:
+        set_min_plot_range(ax0, 0.2)
+    if "Acceleration" in title:
+        set_min_plot_range(ax0, 0.02)
 
     fig.set_figwidth(16)
     fig.set_figheight(9)
     fig.suptitle(title, fontsize=20)
-    for i in range(3):
-        ax[i].grid(True)
-        ax[i].legend(loc="best")
 
-    return fig, ax
+    ax0.grid(True)
+    ax0.legend(loc="best")
+    ax1.grid(True)
+    ax1.legend(loc="best")
+    ax2.grid(True)
+    ax2.legend(loc="best")
+
+    return fig, [ax0, ax1, ax2]
+
+
+def plot_trajectories(sim_data, diff_data):
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    base = plt.gca().transData
+    rot = transforms.Affine2D().rotate_deg(90)
+    plt.plot(sim_data.iloc[:, 0], sim_data.iloc[:, 1],
+             transform=rot + base,
+             label="Gazebo Simulation",
+             color="darkorange")
+    plt.plot(diff_data.iloc[:, 0], diff_data.iloc[:, 1],
+             transform=rot + base,
+             label="Python Simulation",
+             color="royalblue")
+    plt.xlim([-max(diff_data.iloc[:, 1]) - 10, max(diff_data.iloc[:, 1]) + 10])
+    plt.ylim([-max(diff_data.iloc[:, 0]) - 10, max(diff_data.iloc[:, 0]) + 10])
+    plt.grid()
+    plt.legend(loc="best")
+
+    ax.set_xlabel('Y Axis Position [m]')
+    ax.set_ylabel('X Axis Position [m]')
+    fig.suptitle("Platform Trajectory", fontsize=20)
+
+    im = plt.imread("/home/g-poulos/Downloads/vereniki.png")
+    imagebox = OffsetImage(im, zoom=0.1)
+    imagebox.image.axes = ax
+    ab = AnnotationBbox(imagebox, (0.5, 0.5), xycoords='axes fraction',
+                        bboxprops={'lw': 0, 'alpha': 0})
+    ax.add_artist(ab)
+
+    ax.annotate("Start position",
+                xy=(1, 1), xycoords='data',
+                xytext=(6, 4), textcoords='data',
+                size=15, va="center", ha="center",
+                arrowprops=dict(arrowstyle="-|>"))
 
 
 def get_input_from_bagfile(bagfile_name):
@@ -104,7 +157,7 @@ def compare_results(bagfile_name, read_dist=False):
     if read_dist:
         dist = True
         filename = bagfile_name
-        print("Reading disturbance data from bagfile")
+        print("Reading disturbance data from bagfile...")
     else:
         dist = False
         filename = None
@@ -165,6 +218,9 @@ def compare_results(bagfile_name, read_dist=False):
     acc_ax[1].set_ylabel('Y-Axis Linear\nAcceleration [m/s^2]')
     acc_ax[2].set_ylabel('Z-Axis Angular\nAcceleration [rad/s^2]')
     acc_ax[2].set_xlabel('Time [s]')
+
+    plot_trajectories(odom_data, pose_diff)
+
     plt.show()
 
 
