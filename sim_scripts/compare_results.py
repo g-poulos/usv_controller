@@ -71,12 +71,12 @@ def plot3_1(diff_values, sim_values, title):
     ax2 = plt.subplot(313, sharex=ax0)
     time = np.linspace(0, 60, diff_values.shape[0])
 
-    ax0.plot(time, diff_values.iloc[:, 0], label="Dynamic Model", color="royalblue")
-    ax1.plot(time, diff_values.iloc[:, 1], label="Dynamic Model", color="royalblue")
-    ax2.plot(time, diff_values.iloc[:, 2], label="Dynamic Model", color="royalblue")
-    ax0.plot(time, sim_values.iloc[:, 0], label="Gazebo", color="darkorange")
-    ax1.plot(time, sim_values.iloc[:, 1], label="Gazebo", color="darkorange")
-    ax2.plot(time, sim_values.iloc[:, 2], label="Gazebo", color="darkorange")
+    ax0.plot(time, diff_values.iloc[:, 0], label="Python Simulation", color="royalblue")
+    ax1.plot(time, diff_values.iloc[:, 1], label="Python Simulation", color="royalblue")
+    ax2.plot(time, diff_values.iloc[:, 2], label="Python Simulation", color="royalblue")
+    ax0.plot(time, sim_values.iloc[:, 0], label="Gazebo Simulation", color="darkorange")
+    ax1.plot(time, sim_values.iloc[:, 1], label="Gazebo Simulation", color="darkorange")
+    ax2.plot(time, sim_values.iloc[:, 2], label="Gazebo Simulation", color="darkorange")
 
     if "Position" in title:
         set_min_plot_range(ax0, 5)
@@ -95,7 +95,7 @@ def plot3_1(diff_values, sim_values, title):
     ax1.legend(loc="best")
     ax2.grid(True)
     ax2.legend(loc="best")
-
+    # ax2.legend(ncol=2, bbox_to_anchor=(1, -0.2))
     return fig, [ax0, ax1, ax2]
 
 
@@ -108,7 +108,7 @@ def plot_trajectories(sim_data, diff_data):
              label="Gazebo Simulation",
              color="darkorange")
     plt.plot(diff_data.iloc[:, 1], diff_data.iloc[:, 0],
-             label="Dynamic Model",
+             label="Python Simulation",
              color="royalblue")
     max_val = max(max(diff_data.iloc[:, 1]), max(diff_data.iloc[:, 0]))
 
@@ -136,6 +136,14 @@ def plot_trajectories(sim_data, diff_data):
                 size=15, va="center", ha="center",
                 arrowprops=dict(arrowstyle="-|>"))
 
+    # ax.annotate("Current Direction", xy=(-5, 5), xytext=(-5, 15),
+    #             arrowprops=dict(facecolor='black', shrink=0.1),
+    #             )
+    #
+    # ax.annotate("Wind Direction", xy=(2, -2), xytext=(17, -2),
+    #             arrowprops=dict(facecolor='black', shrink=0.1),
+    #             )
+
 
 def get_input_from_bagfile(bagfile_name):
     file_name = bagfile_name.split("/")[-2].split("-")[1]
@@ -152,20 +160,22 @@ def compare_results(bagfile_name, read_dist=False):
 
     # Read dynamic model data
     input_vector = get_input_from_bagfile(bagfile_name)
-    print("Running dynamic model sim with input: ", input_vector)
+    print("Running dynamic model simulation with input: ", input_vector)
 
     if read_dist:
         dist = True
         filename = bagfile_name
+        plot = True
         print("Reading disturbance data from bagfile...")
     else:
         dist = False
         filename = None
+        plot = False
 
     run_simulation(input_vector,
                    dist=dist,
                    filename=filename,
-                   plot=False)
+                   plot=plot)
     diff_data = pd.read_csv('disturbances_info/dynamic_model_out.csv')
 
     # Align Gazebo simulation and Dynamic Model values
