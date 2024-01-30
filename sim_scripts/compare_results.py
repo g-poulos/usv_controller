@@ -112,8 +112,8 @@ def plot_trajectories(sim_data, diff_data):
              color="royalblue")
     max_val = max(max(diff_data.iloc[:, 1]), max(diff_data.iloc[:, 0]))
 
-    plt.xlim([max_val + 10, -max_val - 10])
-    plt.ylim([-max_val - 10, max_val + 10])
+    plt.xlim([max_val + 5, -max_val - 5])
+    plt.ylim([-max_val -5, max_val + 5])
 
     plt.grid()
     plt.legend(loc="best")
@@ -166,7 +166,7 @@ def compare_results(bagfile_name, read_dist=False):
                    dist=dist,
                    filename=filename,
                    plot=False)
-    diff_data = pd.read_csv('dynamic_model_out.csv')
+    diff_data = pd.read_csv('disturbances_info/dynamic_model_out.csv')
 
     # Align Gazebo simulation and Dynamic Model values
     x_pos_diff = align_values(diff_data['Position-x'], odom_data_size)
