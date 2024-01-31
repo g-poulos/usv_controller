@@ -57,6 +57,8 @@ class VerenikiControllerNode(Node):
             self.thrust_callback,
             10)
 
+        self.declare_parameter('target', '0, 0, 0')
+
     def thrust_callback(self, msg):
         position_x = msg.pose.pose.position.x
         position_y = msg.pose.pose.position.y
@@ -65,18 +67,19 @@ class VerenikiControllerNode(Node):
                                  msg.pose.pose.orientation.y,
                                  msg.pose.pose.orientation.z])
 
-        x_A = 20
-        y_A = 10
-        theta_des = 45
+        target = self.get_parameter('target').get_parameter_value().string_value
+        target_lst = target.split(",")
+        target = np.array(list(map(float, target_lst)))
+        x_des, y_des, theta_des = target
 
-        P_B = translate_point(np.array([x_A, y_A]),
+        P_B = translate_point(np.array([x_des, y_des]),
                               np.array([position_x, position_y]),
                               np.radians(yaw))
-        direction_angle = np.arctan2(P_B[1], P_B[0])
+        # direction_angle = np.arctan2(P_B[1], P_B[0])
 
-        input_vector = np.array([get_input_thrust(P_B[0], Kp=10),
-                                 get_input_thrust(P_B[1], Kp=10),
-                                 get_input_thrust(theta_des-yaw, Kp=10)])
+        input_vector = np.array([get_input_thrust(P_B[0], Kp=100),
+                                 get_input_thrust(P_B[1], Kp=100),
+                                 get_input_thrust(theta_des-yaw, Kp=100)])
 
         direction_msgs, thrust_msgs = get_thrust_msgs(input_vector)
 
@@ -87,18 +90,20 @@ class VerenikiControllerNode(Node):
         self.steerB_publisher.publish(direction_msgs[1])
         self.steerC_publisher.publish(direction_msgs[2])
 
-        print(f"Translated point: {P_B}")
-        print(f"Direction: {np.degrees(direction_angle + np.pi / 2)}")
-        print(f"Distance: {np.linalg.norm(P_B)}")
-        print(f"Input: {get_input_thrust(P_B[0], Kp=10), get_input_thrust(P_B[1], Kp=10)}")
-
         self.get_logger().info("Thrust info (rad/s, radians): \n"
                                f"Engine A: {thrust_msgs[0].data} {direction_msgs[0].data}\n"
                                f"Engine B: {thrust_msgs[1].data} {direction_msgs[1].data}\n"
                                f"Engine C: {thrust_msgs[2].data} {direction_msgs[2].data}")
 
+        print(f"Target:   {x_des:.4f} {y_des:.4f} {theta_des:.4f} ")
+        print(f"Position: {position_x:.4f} {position_y:.4f} {yaw:.4f}")
+        print(f"Translated point: {P_B}")
+        print(f"Distance: {np.linalg.norm(P_B)}")
+
 
 def main():
+    # ros2 run usv_controller vereniki_p_controller --ros-args -p target:= "x_des, y_des, theta_des"
+
     rclpy.init()
     executor = rclpy.executors.SingleThreadedExecutor()
     lc_node = VerenikiControllerNode()
