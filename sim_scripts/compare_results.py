@@ -152,7 +152,7 @@ def get_input_from_bagfile(bagfile_name):
     return input_vector
 
 
-def compare_results(bagfile_name, read_dist=False):
+def compare_results(bagfile_name, read_dist=False, p_control=False):
     # Read simulation data
     odom_data, acc_data = get_mcap_messages(bagfile_name)
     odom_data_size = odom_data.shape[0]
@@ -160,7 +160,13 @@ def compare_results(bagfile_name, read_dist=False):
 
     # Read dynamic model data
     input_vector = get_input_from_bagfile(bagfile_name)
-    print("Running dynamic model simulation with input: ", input_vector)
+
+    if p_control:
+        target = [input_vector[0], input_vector[1], input_vector[2]]
+        print("Running dynamic model simulation with target: ", input_vector)
+    else:
+        target = False
+        print("Running dynamic model simulation with input: ", input_vector)
 
     if read_dist:
         dist = True
@@ -173,9 +179,11 @@ def compare_results(bagfile_name, read_dist=False):
         plot = False
 
     run_simulation(input_vector,
+                   p_control=target,
                    dist=dist,
                    filename=filename,
                    plot=plot)
+
     diff_data = pd.read_csv('disturbances_info/dynamic_model_out.csv')
 
     # Align Gazebo simulation and Dynamic Model values
@@ -235,9 +243,11 @@ def compare_results(bagfile_name, read_dist=False):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 3 or len(sys.argv) < 2:
+    if len(sys.argv) > 4 or len(sys.argv) < 2:
         print('Usage: compare_results.py -record.mcap-')
     elif len(sys.argv) == 2:
         compare_results(sys.argv[1])
     elif len(sys.argv) == 3:
         compare_results(sys.argv[1], read_dist=True)
+    elif len(sys.argv) == 4:
+        compare_results(sys.argv[1], p_control=True, read_dist=True)

@@ -77,9 +77,9 @@ class VerenikiControllerNode(Node):
                               np.radians(yaw))
         # direction_angle = np.arctan2(P_B[1], P_B[0])
 
-        input_vector = np.array([get_input_thrust(P_B[0], Kp=100),
-                                 get_input_thrust(P_B[1], Kp=100),
-                                 get_input_thrust(theta_des-yaw, Kp=100)])
+        input_vector = np.array([get_input_thrust(P_B[0], Kp=70),
+                                 get_input_thrust(P_B[1], Kp=70),
+                                 get_input_thrust(theta_des-yaw, Kp=40)])
 
         direction_msgs, thrust_msgs = get_thrust_msgs(input_vector)
 

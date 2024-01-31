@@ -5,6 +5,7 @@ from mcap_ros2.reader import read_ros2_messages
 
 from disturbances import IntegratedWhiteNoise, read_csv, calculate_wrench
 from kinematics import *
+from usv_controller.vereniki_p_controller import get_input_thrust, translate_point
 
 
 # Duplicate function to avoid 'Code Unreachable' bug
@@ -202,8 +203,25 @@ def read_disturbances_from_file(filename, iterations):
             gz_wind_dir[0].to_numpy())
 
 
-def run_simulation(thrust_input, dist=True, filename=None, plot=True):
+def p_controller(target, pose):
+    x_des, y_des, theta_des = target
+    position_x, position_y, yaw = pose
+    theta_des = np.radians(theta_des)
+
+    P_B = translate_point(np.array([x_des, y_des]),
+                          np.array([position_x, position_y]),
+                          yaw)
+
+    input_vector = np.array([get_input_thrust(P_B[0], Kp=70),
+                             get_input_thrust(P_B[1], Kp=70),
+                             get_input_thrust(theta_des - yaw, Kp=40)])
+    return input_vector
+
+
+def run_simulation(thrust_input, p_control=None, dist=True, filename=None, plot=True):
     # Disturbances
+    if p_control is None:
+        p_control = []
     current_velocity = IntegratedWhiteNoise(0, 0.3, 0.1, 0.05)
     current_direction = IntegratedWhiteNoise(155, 205, 180, 20)
     current_wrench_info = read_csv("disturbances_info/current_table.csv")
@@ -232,6 +250,8 @@ def run_simulation(thrust_input, dist=True, filename=None, plot=True):
         current_mag, current_dir, wind_mag, wind_dir = read_disturbances_from_file(filename, it-1)
 
     for i in range(it - 1):
+        if p_control:
+            thrust_input = p_controller(p_control, pos[:, i])
 
         if dist:
             if not filename:
@@ -273,8 +293,10 @@ def run_simulation(thrust_input, dist=True, filename=None, plot=True):
     # print(f"Position: {pos[:, i + 1]}")
     # print()
 
-    save_to_file(acc, pos, vel, "dynamic_model_out.csv")
+    save_to_file(acc, pos, vel, "disturbances_info/dynamic_model_out.csv")
 
+    plt.rcParams["font.family"] = "Times New Roman"
+    plt.rcParams.update({'font.size': 15})
     if plot:
         # plot_pos_vel_acc(pos, vel, acc)
         big_plots(pos, vel, acc)
@@ -287,7 +309,8 @@ if __name__ == '__main__':
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams.update({'font.size': 15})
 
-    run_simulation(np.array([100, 0, 0]),
-                   dist=True,
+    run_simulation(np.array([200, 0, 40]),
+                   p_control=[5, 5, 90],
+                   dist=False,
                    filename=None,
                    plot=True)
