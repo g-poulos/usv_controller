@@ -2,34 +2,8 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float64
-import numpy as np
 from nav_msgs.msg import Odometry
-
-L_bc = 3.5          # Length of the triangular base
-L_ac = 4.5          # Length of the triangular side
-
-d_ad = np.sqrt(L_ac ** 2 - (L_bc / 2) ** 2)
-d_bf = L_bc / 2
-d_ae = d_ad * (2 / 3)
-
-
-def get_thrust_7a(input_vec):
-    J = np.array([[1, 0, -(d_bf - (L_bc / 2))],
-                  [0, -1, -d_ae],
-                  [1, 0, -d_bf],
-                  [0, -1, (d_ad - d_ae)],
-                  [1, 0, (L_bc - d_bf)],
-                  [0, -1, (d_ad - d_ae)]])
-    J = J.T
-
-    J_plus = J.T @ np.linalg.inv(J @ J.T)
-    return J_plus @ input_vec
-
-
-def cartesian_to_polar(x, y):
-    magnitude = np.sqrt(x**2 + y**2)
-    theta = np.arctan2(x, y) - np.pi/2
-    return magnitude, theta
+from .vereniki_utilities import *
 
 
 def thrust_to_rotations(thrust):
@@ -56,16 +30,10 @@ def get_input_thrust(value, Kp):
     return value
 
 
-def quaternion_to_yaw(quaternion):
-    q0, q1, q2, q3 = quaternion
-    yaw = np.arctan2(2 * (q0 * q3 + q1 * q2), 1 - 2 * (q2**2 + q3**2))
-    return np.degrees(yaw)
-
-
 class VerenikiControllerNode(Node):
     def __init__(self):
         super().__init__("vereniki_p_controller")
-        self.get_logger().info("Started Vereniki controller node!")
+        self.get_logger().info("Started Vereniki P-controller node!")
 
         # Thrusters
         self.thrustA_publisher = self.create_publisher(
@@ -86,10 +54,10 @@ class VerenikiControllerNode(Node):
         self.odom_subscription = self.create_subscription(
             Odometry,
             "/model/vereniki/odometry",
-            self.pose_callback,
+            self.thrust_callback,
             10)
 
-    def pose_callback(self, msg):
+    def thrust_callback(self, msg):
         position_x = msg.pose.pose.position.x
         position_y = msg.pose.pose.position.y
         yaw = quaternion_to_yaw([msg.pose.pose.orientation.w,
@@ -106,56 +74,31 @@ class VerenikiControllerNode(Node):
                               np.radians(yaw))
         direction_angle = np.arctan2(P_B[1], P_B[0])
 
-        self.send_thrust_command(np.array([get_input_thrust(P_B[0], Kp=10),
-                                           get_input_thrust(P_B[1], Kp=10),
-                                           get_input_thrust(theta_des-yaw, Kp=10)]))
+        input_vector = np.array([get_input_thrust(P_B[0], Kp=10),
+                                 get_input_thrust(P_B[1], Kp=10),
+                                 get_input_thrust(theta_des-yaw, Kp=10)])
+
+        direction_msgs, thrust_msgs = get_thrust_msgs(input_vector)
+
+        self.thrustA_publisher.publish(thrust_msgs[0])
+        self.thrustB_publisher.publish(thrust_msgs[1])
+        self.thrustC_publisher.publish(thrust_msgs[2])
+        self.steerA_publisher.publish(direction_msgs[0])
+        self.steerB_publisher.publish(direction_msgs[1])
+        self.steerC_publisher.publish(direction_msgs[2])
 
         print(f"Translated point: {P_B}")
         print(f"Direction: {np.degrees(direction_angle + np.pi / 2)}")
         print(f"Distance: {np.linalg.norm(P_B)}")
         print(f"Input: {get_input_thrust(P_B[0], Kp=10), get_input_thrust(P_B[1], Kp=10)}")
 
-    def send_thrust_command(self, input_vector):
-        msgs = get_thrust_7a(input_vector)
-
-        thrustA_msg = Float64()
-        directionA_msg = Float64()
-        thrustB_msg = Float64()
-        directionB_msg = Float64()
-        thrustC_msg = Float64()
-        directionC_msg = Float64()
-
-        thrustA, thetaA = cartesian_to_polar(msgs[0], msgs[1])
-        thrustB, thetaB = cartesian_to_polar(msgs[2], msgs[3])
-        thrustC, thetaC = cartesian_to_polar(msgs[4], msgs[5])
-
-        thrustA_msg.data = thrust_to_rotations(thrustA)
-        directionA_msg.data = thetaA
-        thrustB_msg.data = thrust_to_rotations(thrustB)
-        directionB_msg.data = thetaB
-        thrustC_msg.data = thrust_to_rotations(thrustC)
-        directionC_msg.data = thetaC
-
-        self.thrustA_publisher.publish(thrustA_msg)
-        self.thrustB_publisher.publish(thrustB_msg)
-        self.thrustC_publisher.publish(thrustC_msg)
-
-        self.steerA_publisher.publish(directionA_msg)
-        self.steerB_publisher.publish(directionB_msg)
-        self.steerC_publisher.publish(directionC_msg)
-
         self.get_logger().info("Thrust info (rad/s, radians): \n"
-                               f"Engine A: {thrustA} {thetaA}\n"
-                               f"Engine B: {thrustB} {thetaB}\n"
-                               f"Engine C: {thrustC} {thetaC}")
+                               f"Engine A: {thrust_msgs[0].data} {direction_msgs[0].data}\n"
+                               f"Engine B: {thrust_msgs[1].data} {direction_msgs[1].data}\n"
+                               f"Engine C: {thrust_msgs[2].data} {direction_msgs[2].data}")
 
 
 def main():
-    # ros2 run usv_controller vereniki_controller --ros-args -p thrust:="100, 0, 0"
-    # ros2 run usv_controller vereniki_controller --ros-args -p cmd_type := direction_only
-    # ros2 run usv_controller vereniki_controller --ros-args -p cmd_type := direction_only
-    #                                                        -p thrust:="100, 0, 0"
-
     rclpy.init()
     executor = rclpy.executors.SingleThreadedExecutor()
     lc_node = VerenikiControllerNode()
