@@ -1,6 +1,8 @@
 import math
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from mcap_ros2.reader import read_ros2_messages
 
 from disturbances import IntegratedWhiteNoise, read_csv, calculate_wrench
@@ -206,16 +208,47 @@ def read_disturbances_from_file(filename, iterations):
 def p_controller(target, pose):
     x_des, y_des, theta_des = target
     position_x, position_y, yaw = pose
-    theta_des = np.radians(theta_des)
+    yaw = np.rad2deg(yaw)
 
     P_B = translate_point(np.array([x_des, y_des]),
                           np.array([position_x, position_y]),
-                          yaw)
+                          np.radians(yaw))
 
     input_vector = np.array([get_input_thrust(P_B[0], Kp=70),
                              get_input_thrust(P_B[1], Kp=70),
-                             get_input_thrust(theta_des - yaw, Kp=40)])
+                             get_input_thrust(theta_des - yaw, Kp=45)])
     return input_vector
+
+
+def plot_trajectories(diff_data):
+    plt.rcParams["font.family"] = "Times New Roman"
+    plt.rcParams.update({'font.size': 15})
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    plt.plot(diff_data[1, :], diff_data[0, :],
+             label="Python Simulation",
+             color="royalblue")
+    max_val = max(max(diff_data[1, :]), max(diff_data[0, :]))
+
+    padding = 10
+    plt.xlim([max_val + padding, -max_val - padding])
+    plt.ylim([-max_val - padding, max_val + padding])
+
+    plt.grid()
+    plt.legend(loc="upper left")
+
+    ax.set_xlabel('Y Axis Position [m]')
+    ax.set_ylabel('X Axis Position [m]')
+    fig.suptitle("Platform Trajectory", fontsize=20)
+
+    im = plt.imread("/home/g-poulos/Downloads/vereniki.png")
+    scale = (abs(ax.get_xlim()[0]) + abs(ax.get_xlim()[1])) / 5
+    imagebox = OffsetImage(im, zoom=1 / scale)
+    imagebox.image.axes = ax
+    ab = AnnotationBbox(imagebox, (0.5, 0.5), xycoords='axes fraction',
+                        bboxprops={'lw': 0, 'alpha': 0})
+    ax.add_artist(ab)
+    plt.show()
 
 
 def run_simulation(thrust_input, p_control=None, dist=True, filename=None, plot=True):
@@ -300,6 +333,7 @@ def run_simulation(thrust_input, p_control=None, dist=True, filename=None, plot=
     if plot:
         # plot_pos_vel_acc(pos, vel, acc)
         big_plots(pos, vel, acc)
+        plot_trajectories(pos)
         if dist:
             plot_dist(current_mag, current_dir, "Ocean Current Disturbance")
             plot_dist(wind_mag, wind_dir, "Wind Disturbance")
@@ -310,7 +344,7 @@ if __name__ == '__main__':
     plt.rcParams.update({'font.size': 15})
 
     run_simulation(np.array([200, 0, 40]),
-                   p_control=[5, 5, 90],
+                   p_control=[18, 18, 90],
                    dist=False,
                    filename=None,
                    plot=True)

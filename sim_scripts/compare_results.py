@@ -112,11 +112,12 @@ def plot_trajectories(sim_data, diff_data):
              color="royalblue")
     max_val = max(max(diff_data.iloc[:, 1]), max(diff_data.iloc[:, 0]))
 
-    plt.xlim([max_val + 5, -max_val - 5])
-    plt.ylim([-max_val -5, max_val + 5])
+    padding = 10
+    plt.xlim([max_val + padding, -max_val - padding])
+    plt.ylim([-max_val - padding, max_val + padding])
 
     plt.grid()
-    plt.legend(loc="best")
+    plt.legend(loc="upper left")
 
     ax.set_xlabel('Y Axis Position [m]')
     ax.set_ylabel('X Axis Position [m]')
@@ -136,13 +137,13 @@ def plot_trajectories(sim_data, diff_data):
                 size=15, va="center", ha="center",
                 arrowprops=dict(arrowstyle="-|>"))
 
-    # ax.annotate("Current Direction", xy=(-5, 5), xytext=(-5, 15),
-    #             arrowprops=dict(facecolor='black', shrink=0.1),
-    #             )
-    #
-    # ax.annotate("Wind Direction", xy=(2, -2), xytext=(17, -2),
-    #             arrowprops=dict(facecolor='black', shrink=0.1),
-    #             )
+    ax.annotate("Current Direction", xy=(-5, 5), xytext=(-5, 15),
+                arrowprops=dict(facecolor='black', shrink=0.1),
+                )
+
+    ax.annotate("Wind Direction", xy=(6, 2), xytext=(23, 2.3),
+                arrowprops=dict(facecolor='black', shrink=0.1),
+                )
 
 
 def get_input_from_bagfile(bagfile_name):
