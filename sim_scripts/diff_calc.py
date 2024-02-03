@@ -251,10 +251,8 @@ def plot_trajectories(diff_data):
     plt.show()
 
 
-def run_simulation(thrust_input, p_control=None, dist=True, filename=None, plot=True):
+def run_simulation(input_vector, duration=1, p_control=False, dist=True, dist_file=None, plot=False):
     # Disturbances
-    if p_control is None:
-        p_control = []
     current_velocity = IntegratedWhiteNoise(0, 0.3, 0.1, 0.05)
     current_direction = IntegratedWhiteNoise(155, 205, 180, 20)
     current_wrench_info = read_csv("disturbances_info/current_table.csv")
@@ -264,9 +262,9 @@ def run_simulation(thrust_input, p_control=None, dist=True, filename=None, plot=
     mass_inv = np.linalg.inv(get_mass_matrix())
 
     # Iterations
+    # sim duration in minutes
     step = 0.001
-    minutes = 1
-    it = int(1000 * 60) * minutes
+    it = int(1000 * 60) * duration
 
     # Data
     acc = np.zeros((3, it), dtype=np.float64)
@@ -279,15 +277,18 @@ def run_simulation(thrust_input, p_control=None, dist=True, filename=None, plot=
     wind_mag = np.zeros(it - 1, dtype=np.float64)
     wind_dir = np.zeros(it - 1, dtype=np.float64)
 
-    if filename:
-        current_mag, current_dir, wind_mag, wind_dir = read_disturbances_from_file(filename, it-1)
+    if dist_file:
+        current_mag, current_dir, wind_mag, wind_dir = (
+            read_disturbances_from_file(dist_file, it - 1))
 
     for i in range(it - 1):
         if p_control:
-            thrust_input = p_controller(p_control, pos[:, i])
+            thrust_input = p_controller(input_vector, pos[:, i])
+        else:
+            thrust_input = np.array(input_vector)
 
         if dist:
-            if not filename:
+            if not dist_file:
                 wind_mag[i] = wind_velocity.get_value()
                 wind_dir[i] = wind_direction.get_value()
                 current_mag[i] = current_velocity.get_value()
@@ -344,7 +345,7 @@ if __name__ == '__main__':
     plt.rcParams.update({'font.size': 15})
 
     run_simulation(np.array([200, 0, 40]),
-                   p_control=[18, 18, 90],
+                   p_control=False,
                    dist=False,
-                   filename=None,
+                   dist_file=None,
                    plot=True)

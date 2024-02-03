@@ -144,6 +144,10 @@ class SimpleBagRecorder(Node):
             self.wind_direction_callback,
             10)
 
+        # ------------------------| PARAMETERS |------------------------
+
+        self.declare_parameter('duration', 60.0)
+
     def wave_force_callback(self, msg):
         self.writer.write(
             '/wave/force',
@@ -202,17 +206,18 @@ class SimpleBagRecorder(Node):
         global start_time, first_msg
         sim_time = msg.clock.sec
         rec_time = sim_time - start_time
+        duration = self.get_parameter('duration').get_parameter_value().double_value
 
         if first_msg:
             start_time = sim_time
             rec_time = 0
             first_msg = False
 
-        if rec_time > 60 and sbr:
+        if rec_time > duration and sbr:
             sbr.destroy_node()
             rclpy.shutdown()
 
-        self.get_logger().info(f"Sim time: {sim_time}, Rec time: {rec_time}",
+        self.get_logger().info(f"Sim time: {sim_time}, Rec time: {rec_time}/{duration}",
                                throttle_duration_sec=1)
 
 

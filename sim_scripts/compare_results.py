@@ -64,12 +64,12 @@ def set_min_plot_range(ax, min_value):
         ax.set_ylim(ymin=-min_value, ymax=min_value)
 
 
-def plot3_1(diff_values, sim_values, title):
+def plot3_1(diff_values, sim_values, seconds, title):
     fig = plt.figure()
     ax0 = plt.subplot(311)
     ax1 = plt.subplot(312, sharex=ax0, sharey=ax0)
     ax2 = plt.subplot(313, sharex=ax0)
-    time = np.linspace(0, 60, diff_values.shape[0])
+    time = np.linspace(0, seconds, diff_values.shape[0])
 
     ax0.plot(time, diff_values.iloc[:, 0], label="Python Simulation", color="royalblue")
     ax1.plot(time, diff_values.iloc[:, 1], label="Python Simulation", color="royalblue")
@@ -99,7 +99,7 @@ def plot3_1(diff_values, sim_values, title):
     return fig, [ax0, ax1, ax2]
 
 
-def plot_trajectories(sim_data, diff_data):
+def plot_trajectories(sim_data, diff_data, padding=10):
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams.update({'font.size': 15})
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -112,7 +112,6 @@ def plot_trajectories(sim_data, diff_data):
              color="royalblue")
     max_val = max(max(diff_data.iloc[:, 1]), max(diff_data.iloc[:, 0]))
 
-    padding = 10
     plt.xlim([max_val + padding, -max_val - padding])
     plt.ylim([-max_val - padding, max_val + padding])
 
@@ -153,7 +152,7 @@ def get_input_from_bagfile(bagfile_name):
     return input_vector
 
 
-def compare_results(bagfile_name, read_dist=False, p_control=False):
+def compare_results(bagfile_name, p_control=False, duration=60):
     # Read simulation data
     odom_data, acc_data = get_mcap_messages(bagfile_name)
     odom_data_size = odom_data.shape[0]
@@ -163,27 +162,25 @@ def compare_results(bagfile_name, read_dist=False, p_control=False):
     input_vector = get_input_from_bagfile(bagfile_name)
 
     if p_control:
-        target = [input_vector[0], input_vector[1], input_vector[2]]
         print("Running dynamic model simulation with target: ", input_vector)
     else:
-        target = False
         print("Running dynamic model simulation with input: ", input_vector)
+    print(f"Simulation duration: {duration}")
 
-    if read_dist:
-        dist = True
-        filename = bagfile_name
-        plot = True
+    if "dist" in bagfile_name:
         print("Reading disturbance data from bagfile...")
+        run_simulation(input_vector,
+                       duration=duration,
+                       p_control=p_control,
+                       dist=True,
+                       dist_file=bagfile_name,
+                       plot=True)
     else:
-        dist = False
-        filename = None
-        plot = False
-
-    run_simulation(input_vector,
-                   p_control=target,
-                   dist=dist,
-                   filename=filename,
-                   plot=plot)
+        run_simulation(input_vector,
+                       duration=duration,
+                       p_control=p_control,
+                       dist=False,
+                       plot=True)
 
     diff_data = pd.read_csv('disturbances_info/dynamic_model_out.csv')
 
@@ -219,9 +216,12 @@ def compare_results(bagfile_name, read_dist=False, p_control=False):
     # Plot results
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams.update({'font.size': 15})
-    pose_fig, pose_ax = plot3_1(pose_diff, odom_data, title="Position and Orientation")
-    twist_fig, twist_ax = plot3_1(twist_diff, odom_data.iloc[:, 3:], title="Linear and Angular Velocity")
-    acc_fig, acc_ax = plot3_1(acc_diff, acc_data, title="Linear and Angular Acceleration")
+    pose_fig, pose_ax = plot3_1(pose_diff, odom_data, duration*60,
+                                title="Position and Orientation")
+    twist_fig, twist_ax = plot3_1(twist_diff, odom_data.iloc[:, 3:], duration*60,
+                                  title="Linear and Angular Velocity")
+    acc_fig, acc_ax = plot3_1(acc_diff, acc_data, duration*60,
+                              title="Linear and Angular Acceleration")
 
     pose_ax[0].set_ylabel('X-Axis Position [m]')
     pose_ax[1].set_ylabel('Y-Axis Position [m]')
@@ -244,11 +244,15 @@ def compare_results(bagfile_name, read_dist=False, p_control=False):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 4 or len(sys.argv) < 2:
+    if len(sys.argv) > 3 or len(sys.argv) < 2:
         print('Usage: compare_results.py -record.mcap-')
-    elif len(sys.argv) == 2:
-        compare_results(sys.argv[1])
-    elif len(sys.argv) == 3:
-        compare_results(sys.argv[1], read_dist=True)
-    elif len(sys.argv) == 4:
-        compare_results(sys.argv[1], p_control=True, read_dist=True)
+
+    if '-p' in sys.argv:
+        p_control = True
+    else:
+        p_control = False
+
+    compare_results(sys.argv[1],
+                    duration=2,          # Duration in minutes
+                    p_control=p_control)
+
