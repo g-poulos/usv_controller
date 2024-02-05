@@ -70,6 +70,18 @@ class SimpleBagRecorder(Node):
             serialization_format='cdr')
         self.writer.create_topic(current_direction_topic_info)
 
+        current_force_topic_info = rosbag2_py._storage.TopicMetadata(
+            name='/waterCurrent/force',
+            type='geometry_msgs/msg/Vector3',
+            serialization_format='cdr')
+        self.writer.create_topic(current_force_topic_info)
+
+        current_torque_topic_info = rosbag2_py._storage.TopicMetadata(
+            name='/waterCurrent/torque',
+            type='geometry_msgs/msg/Vector3',
+            serialization_format='cdr')
+        self.writer.create_topic(current_torque_topic_info)
+
         wind_speed_topic_info = rosbag2_py._storage.TopicMetadata(
             name='/wind/speed',
             type='std_msgs/msg/Float32',
@@ -81,6 +93,24 @@ class SimpleBagRecorder(Node):
             type='std_msgs/msg/Float32',
             serialization_format='cdr')
         self.writer.create_topic(wind_direction_topic_info)
+
+        wind_force_topic_info = rosbag2_py._storage.TopicMetadata(
+            name='/wind/force',
+            type='geometry_msgs/msg/Vector3',
+            serialization_format='cdr')
+        self.writer.create_topic(wind_force_topic_info)
+
+        wind_torque_topic_info = rosbag2_py._storage.TopicMetadata(
+            name='/wind/torque',
+            type='geometry_msgs/msg/Vector3',
+            serialization_format='cdr')
+        self.writer.create_topic(wind_torque_topic_info)
+
+        thrust_vec_topic_info = rosbag2_py._storage.TopicMetadata(
+            name='/model/vereniki/controller/thrust_vec',
+            type='geometry_msgs/msg/Vector3',
+            serialization_format='cdr')
+        self.writer.create_topic(thrust_vec_topic_info)
 
         # ------------------------| SUBSCRIPTIONS |------------------------
 
@@ -132,6 +162,18 @@ class SimpleBagRecorder(Node):
             self.current_direction_callback,
             10)
 
+        self.current_force_subscription = self.create_subscription(
+            Vector3,
+            "/waterCurrent/force",
+            self.current_force_callback,
+            10)
+
+        self.current_torque_subscription = self.create_subscription(
+            Vector3,
+            "/waterCurrent/torque",
+            self.current_torque_callback,
+            10)
+
         self.wind_speed_subscription = self.create_subscription(
             Float32,
             "/wind/speed",
@@ -144,9 +186,29 @@ class SimpleBagRecorder(Node):
             self.wind_direction_callback,
             10)
 
+        self.wind_force_subscription = self.create_subscription(
+            Vector3,
+            "/wind/force",
+            self.wind_force_callback,
+            10)
+
+        self.wind_torque_subscription = self.create_subscription(
+            Vector3,
+            "/wind/torque",
+            self.wind_torque_callback,
+            10)
+
+        self.thrust_vec_subscription = self.create_subscription(
+            Vector3,
+            "/model/vereniki/controller/thrust_vec",
+            self.thrust_vec_callback,
+            10)
+
         # ------------------------| PARAMETERS |------------------------
 
         self.declare_parameter('duration', 60.0)
+
+    # ------------------------| CALLBACK FUNCTIONS |------------------------
 
     def wave_force_callback(self, msg):
         self.writer.write(
@@ -190,6 +252,18 @@ class SimpleBagRecorder(Node):
             serialize_message(msg),
             self.get_clock().now().nanoseconds)
 
+    def current_force_callback(self, msg):
+        self.writer.write(
+            "/waterCurrent/force",
+            serialize_message(msg),
+            self.get_clock().now().nanoseconds)
+
+    def current_torque_callback(self, msg):
+        self.writer.write(
+            "/waterCurrent/torque",
+            serialize_message(msg),
+            self.get_clock().now().nanoseconds)
+
     def wind_speed_callback(self, msg):
         self.writer.write(
             "/wind/speed",
@@ -199,6 +273,24 @@ class SimpleBagRecorder(Node):
     def wind_direction_callback(self, msg):
         self.writer.write(
             "/wind/direction",
+            serialize_message(msg),
+            self.get_clock().now().nanoseconds)
+
+    def wind_force_callback(self, msg):
+        self.writer.write(
+            "/wind/force",
+            serialize_message(msg),
+            self.get_clock().now().nanoseconds)
+
+    def wind_torque_callback(self, msg):
+        self.writer.write(
+            "/wind/torque",
+            serialize_message(msg),
+            self.get_clock().now().nanoseconds)
+
+    def thrust_vec_callback(self, msg):
+        self.writer.write(
+            "/model/vereniki/controller/thrust_vec",
             serialize_message(msg),
             self.get_clock().now().nanoseconds)
 

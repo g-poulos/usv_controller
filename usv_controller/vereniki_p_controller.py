@@ -3,6 +3,7 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float64
 from nav_msgs.msg import Odometry
+from geometry_msgs.msg import Vector3
 from .vereniki_utilities import *
 
 
@@ -51,6 +52,9 @@ class VerenikiControllerNode(Node):
         self.steerC_publisher = self.create_publisher(
             Float64, "/model/vereniki/joint/engine_jointC/cmd_steer", 10)
 
+        self.thrust_vec_publisher = self.create_publisher(
+            Vector3, "/model/vereniki/controller/thrust_vec", 10)
+
         self.odom_subscription = self.create_subscription(
             Odometry,
             "/model/vereniki/odometry",
@@ -89,6 +93,12 @@ class VerenikiControllerNode(Node):
         self.steerA_publisher.publish(direction_msgs[0])
         self.steerB_publisher.publish(direction_msgs[1])
         self.steerC_publisher.publish(direction_msgs[2])
+
+        input_vector_msg = Vector3()
+        input_vector_msg.x = input_vector[0]
+        input_vector_msg.y = input_vector[1]
+        input_vector_msg.z = input_vector[2]
+        self.thrust_vec_publisher.publish(input_vector_msg)
 
         self.get_logger().info("Thrust info (rad/s, radians): \n"
                                f"Engine A: {thrust_msgs[0].data} {direction_msgs[0].data}\n"
