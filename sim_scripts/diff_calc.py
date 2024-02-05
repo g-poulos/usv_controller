@@ -277,6 +277,11 @@ def run_simulation(input_vector, duration=1, p_control=False, dist=True, dist_fi
     wind_mag = np.zeros(it - 1, dtype=np.float64)
     wind_dir = np.zeros(it - 1, dtype=np.float64)
 
+    # Acting Forces
+    hydrodynamic_forces = np.zeros((3, it), dtype=np.float64)
+    disturbance_forces = np.zeros((3, it), dtype=np.float64)
+    thrust_forces = np.zeros((3, it), dtype=np.float64)
+
     if dist_file:
         current_mag, current_dir, wind_mag, wind_dir = (
             read_disturbances_from_file(dist_file, it - 1))
@@ -304,8 +309,13 @@ def run_simulation(input_vector, duration=1, p_control=False, dist=True, dist_fi
             # q_dist = current[:, i]
             q_dist = wind[:, i] + current[:, i]
             acting_forces = thrust_input + hydrodynamics(vel[:, i], acc[:, i]) + q_dist
+            disturbance_forces[:, i] = q_dist
         else:
             acting_forces = thrust_input + hydrodynamics(vel[:, i], acc[:, i])
+
+        hydrodynamic_forces[:, i] = hydrodynamics(vel[:, i], acc[:, i])
+        thrust_forces[:, i] = thrust_input
+
 
         # Acceleration
         acc[:, i + 1] = mass_inv @ acting_forces
@@ -327,7 +337,13 @@ def run_simulation(input_vector, duration=1, p_control=False, dist=True, dist_fi
     # print(f"Position: {pos[:, i + 1]}")
     # print()
 
-    save_to_file(acc, pos, vel, "disturbances_info/dynamic_model_out.csv")
+    save_to_file(acc, pos, vel, "simulation_output/dynamic_model_out.csv")
+
+    pd.DataFrame(hydrodynamic_forces.T).to_csv("simulation_output/hydrodynamics.csv",
+                                               index=False)
+    pd.DataFrame(disturbance_forces.T).to_csv("simulation_output/disturbance.csv",
+                                              index=False)
+    pd.DataFrame(thrust_forces.T).to_csv("simulation_output/thrust.csv", index=False)
 
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams.update({'font.size': 15})
@@ -344,8 +360,9 @@ if __name__ == '__main__':
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams.update({'font.size': 15})
 
-    run_simulation(np.array([200, 0, 40]),
-                   p_control=False,
+    run_simulation(np.array([25, 20, 70]),
+                   duration=2,
+                   p_control=True,
                    dist=False,
-                   dist_file=None,
+                   dist_file="../bagfiles/record22/record22_0.mcap",
                    plot=True)

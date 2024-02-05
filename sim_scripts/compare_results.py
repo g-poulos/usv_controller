@@ -165,7 +165,7 @@ def compare_results(bagfile_name, p_control=False, duration=60):
         print("Running dynamic model simulation with target: ", input_vector)
     else:
         print("Running dynamic model simulation with input: ", input_vector)
-    print(f"Simulation duration: {duration}")
+    print(f"Simulation duration: {duration} min")
 
     if "dist" in bagfile_name:
         print("Reading disturbance data from bagfile...")
@@ -182,7 +182,7 @@ def compare_results(bagfile_name, p_control=False, duration=60):
                        dist=False,
                        plot=True)
 
-    diff_data = pd.read_csv('disturbances_info/dynamic_model_out.csv')
+    diff_data = pd.read_csv('simulation_output/dynamic_model_out.csv')
 
     # Align Gazebo simulation and Dynamic Model values
     x_pos_diff = align_values(diff_data['Position-x'], odom_data_size)
@@ -253,6 +253,6 @@ if __name__ == '__main__':
         p_control = False
 
     compare_results(sys.argv[1],
-                    duration=2,          # Duration in minutes
+                    duration=1,          # Duration in minutes
                     p_control=p_control)
 
