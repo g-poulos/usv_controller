@@ -325,7 +325,7 @@ def count_records(path):
 def main(args=None):
     global RECORD_NUM, sbr
 
-    # ros2 run usv_controller bag_writer - -ros - args - p duration := 120.0
+    # ros2 run usv_controller bag_writer --ros-args -p duration:=120.0
 
     RECORD_NUM = count_records(
         os.path.dirname(os.path.realpath(__file__)) + "/../bagfiles")
