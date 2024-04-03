@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from mcap_ros2.reader import read_ros2_messages
 import matplotlib.pyplot as plt
-from diff_calc import run_simulation
+from sim_scripts.dynamic_model.diff_calc import run_simulation
 import sys
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
@@ -42,7 +42,8 @@ def get_mcap_messages(file):
                  'Velocity-z': vel[2, :]}
 
     acc_data = pd.DataFrame(linear_acc_xy)
-    acc_data['Acceleration-z'] = angular_acc_z
+    angular_acc_z_aligned = align_values(pd.DataFrame(angular_acc_z), acc_data.shape[0])
+    acc_data['Acceleration-z'] = angular_acc_z_aligned
     acc_data.rename(columns={0: "Acceleration-x", 1: "Acceleration-y"}, inplace=True)
 
     return pd.DataFrame(odom_data), acc_data
@@ -136,13 +137,13 @@ def plot_trajectories(sim_data, diff_data, padding=10):
                 size=15, va="center", ha="center",
                 arrowprops=dict(arrowstyle="-|>"))
 
-    ax.annotate("Current Direction", xy=(-5, 5), xytext=(-5, 15),
-                arrowprops=dict(facecolor='black', shrink=0.1),
-                )
-
-    ax.annotate("Wind Direction", xy=(6, 2), xytext=(23, 2.3),
-                arrowprops=dict(facecolor='black', shrink=0.1),
-                )
+    # ax.annotate("Current Direction", xy=(-5, 5), xytext=(-5, 15),
+    #             arrowprops=dict(facecolor='black', shrink=0.1),
+    #             )
+    #
+    # ax.annotate("Wind Direction", xy=(6, 2), xytext=(23, 2.3),
+    #             arrowprops=dict(facecolor='black', shrink=0.1),
+    #             )
 
 
 def get_input_from_bagfile(bagfile_name):
@@ -253,6 +254,6 @@ if __name__ == '__main__':
         p_control = False
 
     compare_results(sys.argv[1],
-                    duration=1,          # Duration in minutes
+                    duration=2,          # Duration in minutes
                     p_control=p_control)
 

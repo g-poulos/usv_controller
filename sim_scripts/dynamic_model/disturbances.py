@@ -99,8 +99,8 @@ def test_dist():
     wind_velocity = IntegratedWhiteNoise(0, 10, 3, 0.3)
     wind_direction = IntegratedWhiteNoise(200, 360, 200, 7)
 
-    wind_info = read_csv("disturbances_info/wind_table.csv")
-    current_info = read_csv("disturbances_info/current_table.csv")
+    wind_info = read_csv("../disturbances_info/wind_table.csv")
+    current_info = read_csv("../disturbances_info/current_table.csv")
 
     minutes = 60
     # plot_dist(minutes, wind_direction, wind_velocity, wind_info, mode="wind")

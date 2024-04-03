@@ -248,6 +248,15 @@ def plot_trajectories(diff_data):
     ab = AnnotationBbox(imagebox, (0.5, 0.5), xycoords='axes fraction',
                         bboxprops={'lw': 0, 'alpha': 0})
     ax.add_artist(ab)
+
+    # ax.annotate("Current Direction", xy=(-5, 5), xytext=(-5, 15),
+    #             arrowprops=dict(facecolor='black', shrink=0.1),
+    #             )
+    #
+    # ax.annotate("Wind Direction", xy=(6, 10), xytext=(23, 10.3),
+    #             arrowprops=dict(facecolor='black', shrink=0.1),
+    #             )
+
     plt.show()
 
 
@@ -255,10 +264,10 @@ def run_simulation(input_vector, duration=1, p_control=False, dist=True, dist_fi
     # Disturbances
     current_velocity = IntegratedWhiteNoise(0, 0.3, 0.1, 0.05)
     current_direction = IntegratedWhiteNoise(155, 205, 180, 20)
-    current_wrench_info = read_csv("disturbances_info/current_table.csv")
+    current_wrench_info = read_csv("../disturbances_info/current_table.csv")
     wind_velocity = IntegratedWhiteNoise(0, 7, 2, 2)
     wind_direction = IntegratedWhiteNoise(245, 295, 270, 20)
-    wind_wrench_info = read_csv("disturbances_info/wind_table.csv")
+    wind_wrench_info = read_csv("../disturbances_info/wind_table.csv")
     mass_inv = np.linalg.inv(get_mass_matrix())
 
     # Iterations
@@ -337,13 +346,13 @@ def run_simulation(input_vector, duration=1, p_control=False, dist=True, dist_fi
     # print(f"Position: {pos[:, i + 1]}")
     # print()
 
-    save_to_file(acc, pos, vel, "simulation_output/dynamic_model_out.csv")
+    save_to_file(acc, pos, vel, "../simulation_output/dynamic_model_out.csv")
 
-    pd.DataFrame(hydrodynamic_forces.T).to_csv("simulation_output/hydrodynamics.csv",
+    pd.DataFrame(hydrodynamic_forces.T).to_csv("../simulation_output/hydrodynamics.csv",
                                                index=False)
-    pd.DataFrame(disturbance_forces.T).to_csv("simulation_output/disturbance.csv",
+    pd.DataFrame(disturbance_forces.T).to_csv("../simulation_output/disturbance.csv",
                                               index=False)
-    pd.DataFrame(thrust_forces.T).to_csv("simulation_output/thrust.csv", index=False)
+    pd.DataFrame(thrust_forces.T).to_csv("../simulation_output/thrust.csv", index=False)
 
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams.update({'font.size': 15})
@@ -360,9 +369,9 @@ if __name__ == '__main__':
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams.update({'font.size': 15})
 
-    run_simulation(np.array([25, 20, 70]),
+    run_simulation(np.array([100, 20, 40]),
                    duration=2,
-                   p_control=True,
-                   dist=False,
-                   dist_file="../bagfiles/record22/record22_0.mcap",
+                   p_control=False,
+                   dist=True,
+                   dist_file=None,
                    plot=True)
