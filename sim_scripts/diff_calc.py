@@ -264,10 +264,10 @@ def run_simulation(input_vector, duration=1, p_control=False, dist=True, dist_fi
     # Disturbances
     current_velocity = IntegratedWhiteNoise(0, 0.3, 0.1, 0.05)
     current_direction = IntegratedWhiteNoise(155, 205, 180, 20)
-    current_wrench_info = read_csv("../disturbances_info/current_table.csv")
+    current_wrench_info = read_csv("disturbances_info/current_table.csv")
     wind_velocity = IntegratedWhiteNoise(0, 7, 2, 2)
     wind_direction = IntegratedWhiteNoise(245, 295, 270, 20)
-    wind_wrench_info = read_csv("../disturbances_info/wind_table.csv")
+    wind_wrench_info = read_csv("disturbances_info/wind_table.csv")
     mass_inv = np.linalg.inv(get_mass_matrix())
 
     # Iterations
@@ -346,13 +346,13 @@ def run_simulation(input_vector, duration=1, p_control=False, dist=True, dist_fi
     # print(f"Position: {pos[:, i + 1]}")
     # print()
 
-    save_to_file(acc, pos, vel, "../simulation_output/dynamic_model_out.csv")
+    save_to_file(acc, pos, vel, "simulation_output/dynamic_model_out.csv")
 
-    pd.DataFrame(hydrodynamic_forces.T).to_csv("../simulation_output/hydrodynamics.csv",
+    pd.DataFrame(hydrodynamic_forces.T).to_csv("simulation_output/hydrodynamics.csv",
                                                index=False)
-    pd.DataFrame(disturbance_forces.T).to_csv("../simulation_output/disturbance.csv",
+    pd.DataFrame(disturbance_forces.T).to_csv("simulation_output/disturbance.csv",
                                               index=False)
-    pd.DataFrame(thrust_forces.T).to_csv("../simulation_output/thrust.csv", index=False)
+    pd.DataFrame(thrust_forces.T).to_csv("simulation_output/thrust.csv", index=False)
 
     plt.rcParams["font.family"] = "Times New Roman"
     plt.rcParams.update({'font.size': 15})

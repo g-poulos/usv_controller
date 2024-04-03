@@ -5,6 +5,12 @@ This repository is dedicated to the vereniki platform model used in
 an open-loop and a proportional controller and the simulation of the platform 
 dynamic model. 
 
+## Environment
+
++ Ubuntu 22.04 (Jammy)
++ Gazebo Sim, version 7.1.0 (Garden)
++ ROS2 Humble 
+
 ## Control
 
 For both controllers to work, the usv_simulation needs to be started from the
@@ -95,7 +101,33 @@ The simulation results are stored in 4 CSV files:
 + `thrust`: The input vector $q_c$ for every simulation iteration
 
 *`hydrodynamics` and `disturbance` files contain forces along the x and y axis and 
-torque about the z-axis*
+torque about the z-axis.*
 
 
 ## Simulation results comparison
+
+To compare the dynamic model simulation to the Gazebo simulation the Python program
+`compare_results.py` was created. It uses the bagfile from the `bagwriter.py` node 
+to run a simulation of the platform dynamic model with the same input as in the Gazebo 
+simulation.
+
+### Example
+```
+cd ~/ros2_ws/src/usv_controller/sim_scripts
+python compare_results.py ../bagfiles/record10dist-20_30_50/record10_0.mcap
+```
+
++ The record directory name is used to extract data from the simulation
+  + If the substring `dist` exists in the name then the disturbances values are read from
+    the bagfile
+  + After the `-` symbol the program expects the input of the controller 
++ `-p` can be added as a second command line argument to use the p-controller. Otherwise, 
+  the open-loop controller is used
++ The duration parameter in the `compare_results.py` main needs to match the duration
+  of the record
+
+
+With the dynamic model simulation result files and the bagfile record from the Gazebo 
+simulation the `plot_forces.ipynb` can be used to plot the hydrodynamics, disturbances
+and thrust forces and torque for both simulations.
+

@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from mcap_ros2.reader import read_ros2_messages
 import matplotlib.pyplot as plt
-from sim_scripts.dynamic_model.diff_calc import run_simulation
+from sim_scripts.diff_calc import run_simulation
 import sys
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
