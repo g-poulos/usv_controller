@@ -35,7 +35,8 @@ body-fixed frame. The third element denotes torque (Nm) about the z-axis of the
 same frame.
 
 ```
-ros2 run usv_controller vereniki_controller --ros-args -p thrust:="100, 0, 0" -p cmd_type := direction_only
+ros2 run usv_controller vereniki_controller --ros-args -p thrust:="100, 0, 0" \
+                                                       -p cmd_type := direction_only
 ```
 
 + `thrust`: the control vector $q_c$ ([100, 0, 0] if not defined)
@@ -49,7 +50,8 @@ distance. While the controller is running, the platform maintains the target pos
 and orientation.
 
 ```
-# ros2 run usv_controller vereniki_p_controller --ros-args -p target:= "x_des, y_des, theta_des"
+ros2 run usv_controller vereniki_p_controller --ros-args -p \
+                                              target:= "x_des, y_des, theta_des"
 ```
 
 ## Gazebo Sim Recording
@@ -127,6 +129,6 @@ python compare_results.py ../bagfiles/record10dist-20_30_50/record10_0.mcap
 
 
 With the dynamic model simulation result files and the bagfile record from the Gazebo 
-simulation the `plot_forces.ipynb` can be used to plot the hydrodynamics, disturbances
+simulation, the `plot_forces.ipynb` can be used to plot the hydrodynamics, disturbances
 and thrust forces and torque for both simulations.
 
