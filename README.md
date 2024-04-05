@@ -1,14 +1,14 @@
 # USV controller
 
-This repository is dedicated to the vereniki platform model used in 
+This repository is dedicated to the triangular platform model used in 
 [usv_simulation](https://github.com/g-poulos/usv_simulation). It contains 
-an open-loop and a proportional controller and the simulation of the platform 
-dynamic model. 
+an open-loop and a proportional controller as well as the simulation of 
+the platform dynamic model. 
 
 ## Environment
 
 + Ubuntu 22.04 (Jammy)
-+ Gazebo Sim, version 7.1.0 (Garden)
++ Gazebo Sim, version 7.6.0 (Garden)
 + ROS2 Humble 
 
 ## Control
@@ -43,7 +43,7 @@ ros2 run usv_controller vereniki_controller --ros-args -p thrust:="100, 0, 0" -p
 
 The proportional controller takes as input a point and a desired orientation. The 
 platform moves towards the target with linear and angular speed proportional of its 
-distance. While the controller is running the platform maintains the target position
+distance. While the controller is running, the platform maintains the target position
 and orientation.
 
 ```
@@ -64,9 +64,6 @@ ros2 run usv_controller bag_writer --ros-args -p duration:=120.0
 + `duration`: recording duration in seconds 
 
 ## Dynamic Model Simulation
-
-The dynamic model of the platform is simulated using Euler's Method. All the scripts
-for the simulation are in the `sim_scripts/dynamic_model` directory.
 
 ```
 cd ~/ros2_ws/src/usv_controller/sim_scripts/dynamic_model
