@@ -26,7 +26,9 @@ source ../../install/local_setup.bash
 ### Open-loop Controller 
 
 Using the kinematics of the platform its movement can be controlled by defining the 
-3x1 vector: $q_c = [f_x, f_y, n_z]^T$
+3x1 vector: 
+
+$$q_c = [f_x, f_y, n_z]^T$$
 
 The first two elements denote force (N) along the x and y axis of the platform
 body-fixed frame. The third element denotes torque (Nm) about the z-axis of the
